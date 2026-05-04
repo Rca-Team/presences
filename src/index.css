@@ -1,0 +1,1315 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 220 25% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 10%;
+
+    --primary: 212 100% 47%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 220 25% 14%;
+
+    --muted: 210 20% 94%;
+    --muted-foreground: 220 15% 40%;
+
+    --accent: 210 40% 94%;
+    --accent-foreground: 220 25% 14%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 152 76% 44%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 38 96% 54%;
+    --warning-foreground: 220 25% 10%;
+
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 212 100% 47%;
+
+    --radius: 0.75rem;
+
+    --gradient-start: rgba(228, 231, 238, 0.8);
+    --gradient-end: rgba(240, 243, 247, 0.8);
+
+    --sidebar-background: 210 20% 98%;
+    --sidebar-foreground: 220 25% 10%;
+    --sidebar-primary: 212 100% 47%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 94%;
+    --sidebar-accent-foreground: 220 25% 14%;
+    --sidebar-border: 220 15% 90%;
+    --sidebar-ring: 212 100% 47%;
+
+    /* iOS-inspired vibrant palette */
+    --cyan: 195 100% 50%;
+    --violet: 280 100% 60%;
+    --rose: 350 100% 60%;
+    --amber: 35 100% 55%;
+    --emerald: 155 100% 45%;
+    --indigo: 240 100% 65%;
+    --teal: 175 80% 45%;
+    --fuchsia: 295 90% 60%;
+    
+    /* iOS accent colors */
+    --ios-blue: 211 100% 50%;
+    --ios-green: 142 76% 45%;
+    --ios-orange: 28 100% 55%;
+    --ios-pink: 340 100% 65%;
+    --ios-purple: 280 100% 65%;
+    --ios-red: 0 100% 60%;
+    --ios-yellow: 45 100% 55%;
+    --ios-mint: 168 76% 50%;
+
+    /* School theme colors */
+    --school-blue: 212 100% 47%;
+    --school-green: 152 76% 44%;
+    --school-yellow: 38 96% 54%;
+    --school-red: 0 84% 60%;
+    --school-purple: 271 81% 56%;
+
+    /* Animation properties */
+    --animation-timing: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ios-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ios-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  .dark {
+    --background: 224 50% 6%;
+    --foreground: 210 40% 98%;
+
+    --card: 224 50% 9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 224 50% 9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 224 50% 13%;
+    --muted-foreground: 215 20% 55%;
+
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 152 76% 50%;
+    --success-foreground: 222 47% 11%;
+
+    --warning: 38 96% 64%;
+    --warning-foreground: 222 47% 11%;
+
+    --border: 224 30% 16%;
+    --input: 224 30% 16%;
+    --ring: 224 76% 48%;
+
+    --gradient-start: rgba(8, 12, 22, 0.95);
+    --gradient-end: rgba(15, 23, 42, 0.95);
+
+    --sidebar-background: 224 50% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 224 30% 16%;
+    --sidebar-ring: 224 76% 48%;
+
+    /* Neon accents for dark mode */
+    --neon-cyan: 195 100% 70%;
+    --neon-purple: 280 100% 75%;
+    --neon-blue: 211 100% 65%;
+    --neon-pink: 340 100% 70%;
+
+    /* iOS-inspired vibrant palette dark */
+    --cyan: 195 100% 60%;
+    --violet: 280 100% 70%;
+    --rose: 350 100% 65%;
+    --amber: 35 100% 60%;
+    --emerald: 155 100% 55%;
+    --indigo: 240 100% 75%;
+    --teal: 175 80% 55%;
+    --fuchsia: 295 90% 70%;
+    
+    /* iOS accent colors dark */
+    --ios-blue: 211 100% 60%;
+    --ios-green: 142 76% 55%;
+    --ios-orange: 28 100% 60%;
+    --ios-pink: 340 100% 70%;
+    --ios-purple: 280 100% 70%;
+    --ios-red: 0 100% 65%;
+    --ios-yellow: 45 100% 60%;
+    --ios-mint: 168 76% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Smooth theme transitions */
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    transition: background-color 0.3s ease, 
+                color 0.3s ease, 
+                border-color 0.3s ease,
+                box-shadow 0.3s ease,
+                fill 0.3s ease,
+                stroke 0.3s ease !important;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Theme ripple animation */
+@keyframes themeRippleExpand {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 1;
+  }
+  100% {
+    width: 300vmax;
+    height: 300vmax;
+    opacity: 0;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full transition-colors;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}
+
+@layer components {
+  /* iOS Glass Panel */
+  .glass-panel {
+    @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-3xl shadow-xl;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    transition: all 0.5s var(--ios-spring);
+  }
+
+  .glass-panel:hover {
+    transform: scale(1.01);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  
+  .backdrop-panel {
+    @apply bg-gradient-subtle backdrop-blur-xl rounded-3xl shadow-lg;
+    transition: all 0.5s var(--ios-spring);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* iOS Card with spring animation */
+  .ios-card {
+    @apply relative bg-card rounded-3xl p-6 overflow-hidden border border-border/50;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    transition: all 0.5s var(--ios-spring);
+  }
+
+  .ios-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  }
+
+  .ios-card:active {
+    transform: translateY(-2px) scale(0.98);
+    transition: all 0.15s ease-out;
+  }
+
+  /* iOS Colorful Cards */
+  .ios-card-blue {
+    @apply ios-card;
+    background: linear-gradient(145deg, hsl(var(--ios-blue) / 0.15), hsl(var(--ios-blue) / 0.05));
+    border-color: hsl(var(--ios-blue) / 0.3);
+  }
+
+  .ios-card-green {
+    @apply ios-card;
+    background: linear-gradient(145deg, hsl(var(--ios-green) / 0.15), hsl(var(--ios-green) / 0.05));
+    border-color: hsl(var(--ios-green) / 0.3);
+  }
+
+  .ios-card-orange {
+    @apply ios-card;
+    background: linear-gradient(145deg, hsl(var(--ios-orange) / 0.15), hsl(var(--ios-orange) / 0.05));
+    border-color: hsl(var(--ios-orange) / 0.3);
+  }
+
+  .ios-card-pink {
+    @apply ios-card;
+    background: linear-gradient(145deg, hsl(var(--ios-pink) / 0.15), hsl(var(--ios-pink) / 0.05));
+    border-color: hsl(var(--ios-pink) / 0.3);
+  }
+
+  .ios-card-purple {
+    @apply ios-card;
+    background: linear-gradient(145deg, hsl(var(--ios-purple) / 0.15), hsl(var(--ios-purple) / 0.05));
+    border-color: hsl(var(--ios-purple) / 0.3);
+  }
+
+  .ios-card-mint {
+    @apply ios-card;
+    background: linear-gradient(145deg, hsl(var(--ios-mint) / 0.15), hsl(var(--ios-mint) / 0.05));
+    border-color: hsl(var(--ios-mint) / 0.3);
+  }
+
+  /* iOS Gradient Buttons */
+  .ios-button {
+    @apply relative px-6 py-3 rounded-2xl font-semibold text-white overflow-hidden;
+    background: linear-gradient(145deg, hsl(var(--ios-blue)), hsl(var(--ios-purple)));
+    box-shadow: 0 4px 15px hsl(var(--ios-blue) / 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.4s var(--ios-spring);
+  }
+
+  .ios-button:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px hsl(var(--ios-blue) / 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .ios-button:active {
+    transform: translateY(-1px) scale(0.98);
+    transition: all 0.1s ease-out;
+  }
+
+  .ios-button-green {
+    background: linear-gradient(145deg, hsl(var(--ios-green)), hsl(var(--ios-mint)));
+    box-shadow: 0 4px 15px hsl(var(--ios-green) / 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .ios-button-orange {
+    background: linear-gradient(145deg, hsl(var(--ios-orange)), hsl(var(--ios-yellow)));
+    box-shadow: 0 4px 15px hsl(var(--ios-orange) / 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .ios-button-pink {
+    background: linear-gradient(145deg, hsl(var(--ios-pink)), hsl(var(--ios-purple)));
+    box-shadow: 0 4px 15px hsl(var(--ios-pink) / 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  /* Enhanced Card hover effect */
+  .hover-lift {
+    transition: all 0.5s var(--ios-spring);
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Enhanced Button hover effect */
+  .button-hover {
+    transition: all 0.4s var(--ios-spring);
+  }
+  
+  .button-hover:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+  }
+  
+  .button-hover:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
+  }
+  
+  /* Mobile optimizations */
+  .mobile-container {
+    @apply px-4 sm:px-6 md:px-8;
+  }
+  
+  .mobile-touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  .mobile-friendly-spacing {
+    @apply space-y-4 md:space-y-6;
+  }
+  
+  /* Responsive typography */
+  .responsive-heading {
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl;
+  }
+  
+  .responsive-text {
+    @apply text-sm sm:text-base md:text-lg;
+  }
+
+  /* iOS Vibrant glow effects */
+  .glow-ios-blue {
+    box-shadow: 0 0 30px hsl(var(--ios-blue) / 0.4), 0 0 60px hsl(var(--ios-blue) / 0.2);
+  }
+
+  .glow-ios-green {
+    box-shadow: 0 0 30px hsl(var(--ios-green) / 0.4), 0 0 60px hsl(var(--ios-green) / 0.2);
+  }
+
+  .glow-ios-pink {
+    box-shadow: 0 0 30px hsl(var(--ios-pink) / 0.4), 0 0 60px hsl(var(--ios-pink) / 0.2);
+  }
+
+  .glow-ios-purple {
+    box-shadow: 0 0 30px hsl(var(--ios-purple) / 0.4), 0 0 60px hsl(var(--ios-purple) / 0.2);
+  }
+
+  .glow-ios-orange {
+    box-shadow: 0 0 30px hsl(var(--ios-orange) / 0.4), 0 0 60px hsl(var(--ios-orange) / 0.2);
+  }
+
+  /* Neon glow effects */
+  .neon-glow-cyan {
+    box-shadow: 0 0 20px hsl(var(--neon-cyan) / 0.3), 0 0 40px hsl(var(--neon-cyan) / 0.2);
+  }
+
+  .neon-glow-purple {
+    box-shadow: 0 0 20px hsl(var(--neon-purple) / 0.3), 0 0 40px hsl(var(--neon-purple) / 0.2);
+  }
+
+  .neon-glow-blue {
+    box-shadow: 0 0 20px hsl(var(--neon-blue) / 0.3), 0 0 40px hsl(var(--neon-blue) / 0.2);
+  }
+
+  /* iOS Animated Pills/Tags */
+  .ios-pill {
+    @apply inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium;
+    background: linear-gradient(145deg, hsl(var(--ios-blue) / 0.15), hsl(var(--ios-purple) / 0.1));
+    border: 1px solid hsl(var(--ios-blue) / 0.3);
+    transition: all 0.4s var(--ios-spring);
+  }
+
+  .ios-pill:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px hsl(var(--ios-blue) / 0.3);
+  }
+
+  /* School themed components - enhanced with iOS colors */
+  .school-card {
+    @apply relative overflow-hidden rounded-3xl border bg-card shadow-lg;
+    border-color: hsl(var(--ios-blue) / 0.2);
+    transition: all 0.5s var(--ios-spring);
+  }
+
+  .school-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  }
+
+  .school-card::before {
+    @apply content-[''] absolute top-0 left-0 w-full h-1;
+    background: linear-gradient(90deg, hsl(var(--ios-blue)), hsl(var(--ios-purple)), hsl(var(--ios-pink)), hsl(var(--ios-orange)));
+  }
+
+  /* Multi-color card borders */
+  .card-gradient-border {
+    @apply relative rounded-3xl overflow-hidden;
+  }
+  .card-gradient-border::before {
+    content: '';
+    @apply absolute inset-0 rounded-3xl;
+    padding: 2px;
+    background: linear-gradient(135deg, hsl(var(--ios-blue)), hsl(var(--ios-purple)), hsl(var(--ios-pink)));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* iOS Text gradients */
+  .text-gradient-ios {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--ios-blue)), hsl(var(--ios-purple)));
+  }
+
+  .text-gradient-ocean {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--cyan)), hsl(var(--ios-blue)));
+  }
+  
+  .text-gradient-aurora {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--ios-green)), hsl(var(--ios-mint)), hsl(var(--ios-blue)));
+  }
+  
+  .text-gradient-cosmic {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--ios-purple)), hsl(var(--ios-pink)), hsl(var(--rose)));
+  }
+  
+  .text-gradient-sunset {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--ios-pink)), hsl(var(--ios-orange)), hsl(var(--ios-yellow)));
+  }
+  
+  .text-gradient-neon {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--cyan)), hsl(var(--ios-purple)));
+  }
+
+  /* Multi-color glow effects */
+  .glow-cyan { box-shadow: 0 0 25px hsl(var(--cyan) / 0.35), 0 0 50px hsl(var(--cyan) / 0.2); }
+  .glow-violet { box-shadow: 0 0 25px hsl(var(--violet) / 0.35), 0 0 50px hsl(var(--violet) / 0.2); }
+  .glow-rose { box-shadow: 0 0 25px hsl(var(--rose) / 0.35), 0 0 50px hsl(var(--rose) / 0.2); }
+  .glow-emerald { box-shadow: 0 0 25px hsl(var(--emerald) / 0.35), 0 0 50px hsl(var(--emerald) / 0.2); }
+  .glow-amber { box-shadow: 0 0 25px hsl(var(--amber) / 0.35), 0 0 50px hsl(var(--amber) / 0.2); }
+  .glow-multi {
+    box-shadow: 
+      -6px -6px 25px hsl(var(--ios-blue) / 0.2),
+      6px -6px 25px hsl(var(--ios-purple) / 0.2),
+      6px 6px 25px hsl(var(--ios-pink) / 0.2),
+      -6px 6px 25px hsl(var(--ios-green) / 0.2);
+  }
+
+  /* iOS Attendance badges */
+  .attendance-present {
+    @apply font-semibold px-3 py-1.5 rounded-full text-xs;
+    background: linear-gradient(145deg, hsl(var(--ios-green)), hsl(var(--ios-mint)));
+    color: white;
+    box-shadow: 0 4px 12px hsl(var(--ios-green) / 0.4);
+  }
+
+  .attendance-late {
+    @apply font-semibold px-3 py-1.5 rounded-full text-xs;
+    background: linear-gradient(145deg, hsl(var(--ios-orange)), hsl(var(--ios-yellow)));
+    color: white;
+    box-shadow: 0 4px 12px hsl(var(--ios-orange) / 0.4);
+  }
+
+  .attendance-absent {
+    @apply font-semibold px-3 py-1.5 rounded-full text-xs;
+    background: linear-gradient(145deg, hsl(var(--ios-red)), hsl(var(--ios-pink)));
+    color: white;
+    box-shadow: 0 4px 12px hsl(var(--ios-red) / 0.4);
+  }
+
+  .school-gradient-bg {
+    background: linear-gradient(180deg, hsl(var(--background)), hsl(var(--background) / 0.95), hsl(var(--ios-blue) / 0.03));
+    transition: background 1s var(--ios-smooth);
+  }
+  
+  /* iOS Card variants */
+  .iso-card {
+    @apply relative bg-card rounded-3xl p-6 overflow-hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    transition: all 0.5s var(--ios-spring);
+  }
+  
+  .iso-card:hover {
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  }
+  
+  .iso-input {
+    @apply bg-muted/50 border border-border rounded-xl px-4 py-3 outline-none;
+    transition: all 0.3s var(--ios-spring);
+  }
+  
+  .iso-input:focus {
+    @apply ring-2 ring-primary border-primary;
+    box-shadow: 0 0 20px hsl(var(--ios-blue) / 0.2);
+  }
+  
+  .iso-button {
+    @apply relative overflow-hidden rounded-xl px-6 py-3 font-semibold transition-all;
+    transition: all 0.4s var(--ios-spring);
+  }
+  
+  .iso-button:after {
+    content: '';
+    @apply absolute inset-0 rounded-xl opacity-0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%);
+    transition: opacity 0.4s var(--ios-smooth);
+  }
+  
+  .iso-button:active:after {
+    opacity: 0.5;
+    transition: 0s;
+  }
+
+  /* iOS Floating action */
+  .ios-fab {
+    @apply fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center text-white;
+    background: linear-gradient(145deg, hsl(var(--ios-blue)), hsl(var(--ios-purple)));
+    box-shadow: 0 8px 25px hsl(var(--ios-blue) / 0.5);
+    transition: all 0.4s var(--ios-spring);
+  }
+
+  .ios-fab:hover {
+    transform: scale(1.1) translateY(-4px);
+    box-shadow: 0 12px 35px hsl(var(--ios-blue) / 0.6);
+  }
+
+  /* iOS Nav pill */
+  .ios-nav-pill {
+    @apply px-5 py-2.5 rounded-full font-medium transition-all;
+    transition: all 0.4s var(--ios-spring);
+  }
+
+  .ios-nav-pill.active {
+    background: linear-gradient(145deg, hsl(var(--ios-blue)), hsl(var(--ios-purple)));
+    color: white;
+    box-shadow: 0 4px 15px hsl(var(--ios-blue) / 0.4);
+  }
+
+  .ios-nav-pill:not(.active):hover {
+    background: hsl(var(--muted));
+  }
+}
+
+/* Enhanced Page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity 500ms, transform 500ms var(--animation-timing);
+}
+
+.page-exit {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.page-exit-active {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
+  transition: opacity 500ms, transform 500ms var(--animation-timing);
+}
+
+/* Enhanced Rotation animation */
+@keyframes float-rotate {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(5deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+.animate-float-rotate {
+  animation: float-rotate 6s var(--animation-timing) infinite;
+}
+
+/* Enhanced 3D hover animation */
+.hover-3d {
+  transition: all 0.5s var(--animation-timing);
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.hover-3d:hover {
+  transform: rotateX(5deg) rotateY(5deg) scale(1.05);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* ISO UI specific animations */
+@keyframes smooth-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-smooth-enter {
+  animation: smooth-enter 0.8s var(--animation-timing);
+}
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.8;
+  }
+}
+
+.animate-subtle-pulse {
+  animation: subtle-pulse 3s var(--animation-timing) infinite;
+}
+
+@keyframes float-shadow {
+  0%, 100% {
+    transform: translateY(0);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.animate-float-shadow {
+  animation: float-shadow 6s var(--animation-timing) infinite;
+}
+
+/* Enhanced School-specific animations */
+@keyframes bell-ring {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20%, 60% {
+    transform: rotate(15deg);
+  }
+  40%, 80% {
+    transform: rotate(-15deg);
+  }
+}
+
+.animate-bell-ring {
+  animation: bell-ring 2s var(--animation-timing);
+}
+
+@keyframes pencil-write {
+  0% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(5px) translateY(5px);
+  }
+  50% {
+    transform: translateX(10px) translateY(0);
+  }
+  75% {
+    transform: translateX(15px) translateY(5px);
+  }
+  100% {
+    transform: translateX(20px) translateY(0);
+  }
+}
+
+.animate-pencil-write {
+  animation: pencil-write 3s var(--animation-timing);
+}
+
+/* Mobile-specific media queries */
+@media (max-width: 640px) {
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Safe area support for notched devices */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Enhanced touch targets */
+@layer components {
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+    touch-action: manipulation;
+  }
+  
+  .touch-target-lg {
+    @apply min-h-[56px] min-w-[56px];
+    touch-action: manipulation;
+  }
+}
+
+/* Improved mobile typography */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+  
+  h1 {
+    @apply text-2xl;
+  }
+  
+  h2 {
+    @apply text-xl;
+  }
+  
+  h3 {
+    @apply text-lg;
+  }
+}
+
+/* Mobile gesture hints */
+.swipe-hint {
+  @apply relative overflow-hidden;
+}
+
+.swipe-hint::after {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent;
+  animation: swipe-hint 2s ease-in-out infinite;
+}
+
+@keyframes swipe-hint {
+  0%, 100% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(100%);
+    opacity: 1;
+  }
+}
+
+/* Pull to refresh animation */
+@keyframes pull-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pull-refresh-spinner {
+  animation: pull-spin 1s linear infinite;
+}
+
+/* Bottom navigation spacing */
+.has-bottom-nav {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+}
+
+/* Improved focus styles for mobile */
+@media (pointer: coarse) {
+  *:focus {
+    outline: none;
+  }
+  
+  *:focus-visible {
+    @apply ring-2 ring-ios-blue/50 ring-offset-2;
+  }
+}
+
+/* Prevent text selection on interactive elements */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Smooth momentum scrolling for lists */
+.momentum-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* Mobile card styles with iOS spring */
+.mobile-card {
+  @apply rounded-3xl p-5 bg-card border border-border/50 shadow-lg;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mobile-card:active {
+  transform: scale(0.96);
+}
+
+/* Responsive grid */
+.responsive-grid {
+  @apply grid gap-4;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+@media (max-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   MOBILE-FIRST ANIMATIONS
+   ============================================ */
+
+/* Tap feedback animation */
+@keyframes tap-feedback {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.tap-feedback:active {
+  animation: tap-feedback 0.2s var(--ios-spring);
+}
+
+/* Bounce on tap */
+@keyframes bounce-tap {
+  0% { transform: scale(1); }
+  30% { transform: scale(0.9); }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+.bounce-tap:active {
+  animation: bounce-tap 0.4s var(--ios-spring);
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s var(--ios-spring);
+}
+
+/* Success pop animation */
+@keyframes success-pop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-success-pop {
+  animation: success-pop 0.5s var(--ios-spring);
+}
+
+/* Slide up from bottom (for modals/sheets) */
+@keyframes slide-up-spring {
+  0% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up-spring {
+  animation: slide-up-spring 0.5s var(--ios-spring);
+}
+
+/* Slide down (for dropdowns) */
+@keyframes slide-down-spring {
+  0% { transform: translateY(-20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-down-spring {
+  animation: slide-down-spring 0.4s var(--ios-spring);
+}
+
+/* Staggered list item animations */
+@keyframes stagger-in {
+  0% { 
+    transform: translateX(-20px); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: translateX(0); 
+    opacity: 1; 
+  }
+}
+
+.stagger-item {
+  animation: stagger-in 0.5s var(--ios-spring) backwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 50ms; }
+.stagger-item:nth-child(3) { animation-delay: 100ms; }
+.stagger-item:nth-child(4) { animation-delay: 150ms; }
+.stagger-item:nth-child(5) { animation-delay: 200ms; }
+.stagger-item:nth-child(6) { animation-delay: 250ms; }
+.stagger-item:nth-child(7) { animation-delay: 300ms; }
+.stagger-item:nth-child(8) { animation-delay: 350ms; }
+.stagger-item:nth-child(9) { animation-delay: 400ms; }
+.stagger-item:nth-child(10) { animation-delay: 450ms; }
+
+/* Fade scale in for cards */
+@keyframes fade-scale-in {
+  0% { 
+    transform: scale(0.9); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: scale(1); 
+    opacity: 1; 
+  }
+}
+
+.fade-scale-in {
+  animation: fade-scale-in 0.4s var(--ios-spring);
+}
+
+/* Wobble animation for attention */
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+.animate-wobble {
+  animation: wobble 0.5s var(--ios-spring);
+}
+
+.hover-wobble:hover {
+  animation: wobble 0.5s var(--ios-spring);
+}
+
+/* Pulse ring animation */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.pulse-ring::before {
+  content: '';
+  @apply absolute inset-0 rounded-full;
+  animation: pulse-ring 1.5s var(--ios-smooth) infinite;
+  background: inherit;
+}
+
+/* Glow pulse for buttons */
+@keyframes button-glow {
+  0%, 100% {
+    box-shadow: 0 4px 15px hsl(var(--ios-blue) / 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 30px hsl(var(--ios-blue) / 0.6);
+  }
+}
+
+.animate-button-glow {
+  animation: button-glow 2s var(--ios-smooth) infinite;
+}
+
+/* Slide in from sides */
+@keyframes slide-in-from-left {
+  0% { transform: translateX(-100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-in-from-right {
+  0% { transform: translateX(100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-from-left 0.5s var(--ios-spring);
+}
+
+.animate-slide-in-right {
+  animation: slide-in-from-right 0.5s var(--ios-spring);
+}
+
+/* Floating animation with glow */
+@keyframes float-glow {
+  0%, 100% {
+    transform: translateY(0);
+    box-shadow: 0 10px 30px hsl(var(--ios-blue) / 0.2);
+  }
+  50% {
+    transform: translateY(-15px);
+    box-shadow: 0 25px 50px hsl(var(--ios-blue) / 0.4);
+  }
+}
+
+.animate-float-glow {
+  animation: float-glow 4s var(--ios-smooth) infinite;
+}
+
+/* Heartbeat for notifications */
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.1); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.05); }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s var(--ios-smooth) infinite;
+}
+
+/* Jiggle for edit mode */
+@keyframes jiggle {
+  0%, 100% { transform: rotate(-1deg); }
+  50% { transform: rotate(1deg); }
+}
+
+.animate-jiggle {
+  animation: jiggle 0.2s ease-in-out infinite;
+}
+
+/* Flip in */
+@keyframes flip-in {
+  0% { 
+    transform: perspective(400px) rotateY(90deg); 
+    opacity: 0; 
+  }
+  40% { 
+    transform: perspective(400px) rotateY(-10deg); 
+  }
+  70% { 
+    transform: perspective(400px) rotateY(10deg); 
+  }
+  100% { 
+    transform: perspective(400px) rotateY(0deg); 
+    opacity: 1; 
+  }
+}
+
+.animate-flip-in {
+  animation: flip-in 0.6s var(--ios-spring);
+}
+
+/* Zoom in */
+@keyframes zoom-in {
+  0% { 
+    transform: scale(0.5); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: scale(1); 
+    opacity: 1; 
+  }
+}
+
+.animate-zoom-in {
+  animation: zoom-in 0.4s var(--ios-spring);
+}
+
+/* Rotate in */
+@keyframes rotate-in {
+  0% { 
+    transform: rotate(-180deg) scale(0); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: rotate(0) scale(1); 
+    opacity: 1; 
+  }
+}
+
+.animate-rotate-in {
+  animation: rotate-in 0.5s var(--ios-spring);
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer-loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-loading {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted-foreground) / 0.1) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-loading 1.5s infinite;
+}
+
+/* Color wave for special elements */
+@keyframes color-wave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-color-wave {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--ios-blue)),
+    hsl(var(--ios-purple)),
+    hsl(var(--ios-pink)),
+    hsl(var(--ios-orange)),
+    hsl(var(--ios-blue))
+  );
+  background-size: 300% 100%;
+  animation: color-wave 5s ease-in-out infinite;
+}
+
+/* iOS-style bounce scroll indicator */
+@keyframes bounce-scroll {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(10px); }
+}
+
+.scroll-indicator {
+  animation: bounce-scroll 1.5s var(--ios-smooth) infinite;
+}
+
+/* Press effect for buttons */
+.press-effect {
+  transition: all 0.15s var(--ios-spring);
+}
+
+.press-effect:active {
+  transform: scale(0.95);
+  filter: brightness(0.9);
+}
+
+/* Hover float effect */
+.hover-float {
+  transition: all 0.4s var(--ios-spring);
+}
+
+.hover-float:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Card tilt on touch */
+@media (hover: none) {
+  .tilt-on-touch:active {
+    transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) scale(0.98);
+    transition: all 0.2s var(--ios-spring);
+  }
+}
+
+/* Entrance animation for page content */
+.page-content-enter > * {
+  animation: stagger-in 0.6s var(--ios-spring) backwards;
+}
+
+.page-content-enter > *:nth-child(1) { animation-delay: 100ms; }
+.page-content-enter > *:nth-child(2) { animation-delay: 200ms; }
+.page-content-enter > *:nth-child(3) { animation-delay: 300ms; }
+.page-content-enter > *:nth-child(4) { animation-delay: 400ms; }
+.page-content-enter > *:nth-child(5) { animation-delay: 500ms; }
+
+/* Notification badge bounce */
+@keyframes badge-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.badge-bounce {
+  animation: badge-bounce 0.3s var(--ios-spring);
+}
+
+/* Loading dots */
+@keyframes loading-dots {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.loading-dots span:nth-child(1) { animation: loading-dots 1.4s infinite 0s; }
+.loading-dots span:nth-child(2) { animation: loading-dots 1.4s infinite 0.2s; }
+.loading-dots span:nth-child(3) { animation: loading-dots 1.4s infinite 0.4s; }
+
+/* Slide toggle animation */
+@keyframes slide-toggle {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}
+
+/* Success checkmark draw */
+@keyframes draw-check {
+  0% { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.draw-check {
+  stroke-dasharray: 100;
+  animation: draw-check 0.5s var(--ios-smooth) forwards;
+}
+
+/* Ripple effect */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  pointer-events: none;
+}
