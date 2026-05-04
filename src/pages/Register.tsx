@@ -16,9 +16,10 @@ import Logo from '@/components/Logo';
 import PageTransition from '@/components/PageTransition';
 import Scan3DCapture from '@/components/register/Scan3DCapture';
 import AutoCapture10 from '@/components/register/AutoCapture10';
+import IDCardAutoFillScanner, { IDCardExtractedFields } from '@/components/register/IDCardAutoFillScanner';
 import { 
   User, Mail, Phone, Building2, GraduationCap, Camera, CheckCircle2,
-  ArrowRight, ArrowLeft, Sparkles, Shield, Users, Scan, Heart, Bus, Zap
+  ArrowRight, ArrowLeft, Sparkles, Shield, Users, Scan, Heart, Bus, Zap, MapPin
 } from 'lucide-react';
 import { 
   CLASSES, SECTIONS, ALL_CLASS_SECTIONS, TRANSPORT_MODES, BLOOD_GROUPS 
@@ -39,6 +40,7 @@ const registrationSchema = z.object({
   medicalInfo: z.string().trim().max(500, 'Medical info is too long').optional(),
   transportMode: z.string().trim().max(30).optional(),
   position: z.string().trim().max(50).optional(),
+  address: z.string().trim().max(300, 'Address is too long').optional(),
 });
 
 const Register = () => {
@@ -57,6 +59,7 @@ const Register = () => {
     bloodGroup: '',
     medicalInfo: '',
     transportMode: '',
+    address: '',
   });
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [faceDescriptor, setFaceDescriptor] = useState<Float32Array | null>(null);
@@ -81,6 +84,7 @@ const Register = () => {
     bloodGroup: formData.bloodGroup.trim(),
     medicalInfo: formData.medicalInfo.trim(),
     transportMode: formData.transportMode.trim(),
+    address: formData.address.trim(),
   });
 
   useEffect(() => {
@@ -151,6 +155,7 @@ const Register = () => {
           medical_info: validData.medicalInfo,
           transport_mode: validData.transportMode,
           class_section: validData.department,
+          address: validData.address,
         },
         validData.department // category = class-section
       );
@@ -165,7 +170,7 @@ const Register = () => {
         }
         
         toast({ title: "Registration Successful! 🎉", description: `Face registered with ${allDescriptors.length} 3D scan samples.` });
-        setFormData({ name: '', email: '', phone: '', parentName: '', parentEmail: '', parentPhone: '', employeeId: '', department: '', position: '', rollNumber: '', bloodGroup: '', medicalInfo: '', transportMode: '' });
+        setFormData({ name: '', email: '', phone: '', parentName: '', parentEmail: '', parentPhone: '', employeeId: '', department: '', position: '', rollNumber: '', bloodGroup: '', medicalInfo: '', transportMode: '', address: '' });
         setFaceImage(null);
         setFaceDescriptor(null);
         setAllDescriptors([]);
@@ -289,6 +294,25 @@ const Register = () => {
                 <AnimatePresence mode="wait">
                   {registrationStep === 1 ? (
                     <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }} className="space-y-5">
+                      <IDCardAutoFillScanner
+                        onExtracted={(f: IDCardExtractedFields) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            name: f.name || prev.name,
+                            employeeId: f.employee_id || prev.employeeId,
+                            rollNumber: f.roll_number || prev.rollNumber,
+                            department: f.department || prev.department,
+                            email: f.email || prev.email,
+                            phone: f.phone || prev.phone,
+                            parentName: f.parent_name || prev.parentName,
+                            parentPhone: f.parent_phone || prev.parentPhone,
+                            parentEmail: f.parent_email || prev.parentEmail,
+                            bloodGroup: f.blood_group || prev.bloodGroup,
+                            transportMode: f.transport_mode || prev.transportMode,
+                            address: f.address || prev.address,
+                          }));
+                        }}
+                      />
                       {/* Student Details */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -357,6 +381,19 @@ const Register = () => {
                       <div className="space-y-2">
                         <Label htmlFor="email" className="flex items-center gap-2"><Mail className="w-4 h-4 text-blue-500" />Email (optional)</Label>
                         <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="student@school.edu" className="h-11 bg-white/50 dark:bg-slate-800/50 border-blue-100 dark:border-blue-900" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="address" className="flex items-center gap-2"><MapPin className="w-4 h-4 text-blue-500" />Address</Label>
+                        <textarea
+                          id="address"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          placeholder="House no., street, city, state, PIN"
+                          rows={2}
+                          className="w-full rounded-md border border-blue-100 dark:border-blue-900 bg-white/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
                       </div>
 
                       {/* Parent/Guardian */}

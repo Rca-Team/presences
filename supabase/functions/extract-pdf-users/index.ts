@@ -33,46 +33,29 @@ serve(async (req) => {
     console.log(`Processing file: ${fileName}, type: ${fileType}, data length: ${fileData?.length || 0}`);
 
     // Prepare the prompt for extraction
-    const systemPrompt = `You are an AI assistant specialized in extracting user information from documents, ID cards, and images.
-Your task is to analyze the provided document and extract ALL user/student/employee information visible.
+    const systemPrompt = `You are an AI assistant specialized in extracting student/employee information from ID cards and documents.
 
-CRITICAL INSTRUCTIONS FOR IMAGE EXTRACTION:
-1. If you see ID cards with photos, extract the image/photo region and describe what you see
-2. For each person found, you MUST extract:
-   - name: Full name of the person
-   - employee_id or student_id: Any ID number (if not found, generate like STU-001, STU-002)
-   - department: Department, class, section, or batch
-   - position: Role, grade, designation (default to "Student")
-   - has_photo: boolean indicating if a photo is visible for this person
-   - photo_description: Brief description of the person's photo if visible
+For each person, extract every available field. Use empty string when a field is missing.
+Required fields per person:
+- name: Full name
+- employee_id (or student_id / admission no): ID number on card (generate STU-### if absent)
+- roll_number: Roll number / class roll
+- department: "Class-Section" combined like "5-A" or "10-B" if you see class + section, otherwise the class or department text
+- position: Role / grade (default "Student")
+- email: Student email if shown
+- phone: Student personal phone if shown
+- parent_name: Parent / guardian / father / mother name
+- parent_phone: Parent / guardian / emergency contact phone
+- parent_email: Parent email if present
+- blood_group: e.g. O+, AB-
+- address: Full residential address (single string)
+- transport_mode: e.g. Bus / Walk / Private if shown
+- has_photo: boolean
+- photo_description: brief description if visible
 
-3. IMPORTANT IMAGE HANDLING:
-   - If this is an ID card image, extract the NAME and ID from the card
-   - Look for photo regions in the document
-   - Note any visible face images
-
-4. Extract ALL people visible, even with partial information
-5. Look for tables, lists, ID cards, forms, or any structured data
-
-Return ONLY valid JSON with this exact structure:
-{
-  "users": [
-    {
-      "name": "John Doe",
-      "employee_id": "STU-001",
-      "department": "Computer Science",
-      "position": "Student",
-      "has_photo": true,
-      "photo_description": "Young male with short black hair"
-    }
-  ],
-  "total_extracted": 1,
-  "document_type": "id_card" | "list" | "table" | "form" | "other",
-  "contains_images": true
-}
-
-If you cannot extract any users, return: {"users": [], "total_extracted": 0, "reason": "explanation"}
-Only return valid JSON, no explanations or markdown.`;
+Return ONLY valid JSON, no markdown:
+{ "users": [ { ...fields above } ], "total_extracted": N, "document_type": "id_card|form|table|other", "contains_images": true }
+If nothing is extractable: {"users": [], "total_extracted": 0, "reason": "..."}`;
 
     // Call Lovable AI Gateway
     console.log("Calling Lovable AI Gateway...");
@@ -175,9 +158,18 @@ Only return valid JSON, no explanations or markdown.`;
     // Validate and clean up user data
     extractedData.users = extractedData.users.map((user: any, index: number) => ({
       name: user.name || `Person ${index + 1}`,
-      employee_id: user.employee_id || user.student_id || `STU-${String(index + 1).padStart(3, '0')}`,
-      department: user.department || user.class || '',
+      employee_id: user.employee_id || user.student_id || user.admission_no || `STU-${String(index + 1).padStart(3, '0')}`,
+      roll_number: user.roll_number || user.roll || '',
+      department: user.department || user.class_section || user.class || '',
       position: user.position || user.grade || 'Student',
+      email: user.email || user.student_email || '',
+      phone: user.phone || user.student_phone || '',
+      parent_name: user.parent_name || user.guardian_name || user.father_name || user.mother_name || '',
+      parent_phone: user.parent_phone || user.guardian_phone || user.emergency_contact || '',
+      parent_email: user.parent_email || user.guardian_email || '',
+      blood_group: user.blood_group || user.blood || '',
+      address: user.address || user.residential_address || '',
+      transport_mode: user.transport_mode || user.transport || '',
       photo_url: user.photo_url || user.image_url || '',
       has_photo: user.has_photo || false,
       photo_description: user.photo_description || ''
