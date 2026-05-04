@@ -19,6 +19,7 @@ import Features from './pages/Features';
 import GateMode from './pages/GateMode';
 import ParentPortal from './pages/ParentPortal';
 import Unsubscribe from './pages/Unsubscribe';
+import DataBackup from './pages/DataBackup';
 
 import SplashAnimation from "./components/SplashAnimation";
 import { AttendanceProvider } from './contexts/AttendanceContext';
@@ -96,6 +97,11 @@ function AnimatedRoutes() {
         } />
         <Route path="/parent" element={<ParentPortal />} />
         <Route path="/unsubscribe" element={<Unsubscribe />} />
+        <Route path="/data" element={
+          <ProtectedRoute requireRoles={["admin"]}>
+            <DataBackup />
+          </ProtectedRoute>
+        } />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AnimatePresence>
