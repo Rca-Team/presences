@@ -56,7 +56,7 @@ interface RegisteredUser {
 
 const ROLE_CONFIG: Record<Role, { label: string; icon: React.ElementType; color: string }> = {
   admin: { label: 'Admin', icon: Crown, color: 'text-yellow-500 bg-yellow-500/10' },
-  moderator: { label: 'Principal', icon: ShieldCheck, color: 'text-purple-500 bg-purple-500/10' },
+  principal: { label: 'Principal', icon: ShieldCheck, color: 'text-purple-500 bg-purple-500/10' },
   user: { label: 'User', icon: User, color: 'text-muted-foreground bg-muted' },
 };
 
@@ -165,7 +165,7 @@ const UserAccessManager: React.FC = () => {
           };
         })
         .sort((a, b) => {
-          const roleOrder: Record<string, number> = { admin: 0, moderator: 1, user: 2 };
+          const roleOrder: Record<string, number> = { admin: 0, principal: 1, user: 2 };
           const aOrder = roleOrder[a.role] ?? 2;
           const bOrder = roleOrder[b.role] ?? 2;
           if (aOrder !== bOrder) return aOrder - bOrder;
@@ -337,7 +337,7 @@ const UserAccessManager: React.FC = () => {
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="admin">Admins</SelectItem>
-                <SelectItem value="moderator">Principals</SelectItem>
+                <SelectItem value="principal">Principals</SelectItem>
                 <SelectItem value="user">Users</SelectItem>
               </SelectContent>
             </Select>
@@ -353,7 +353,7 @@ const UserAccessManager: React.FC = () => {
               <Crown className="h-3 w-3 mr-1" />
               {users.filter(u => u.role === 'admin').length} Admins
             </Badge>
-            <Badge className={ROLE_CONFIG.moderator.color}>
+            <Badge className={ROLE_CONFIG.principal.color}>
               <ShieldCheck className="h-3 w-3 mr-1" />
               {users.filter(u => u.role === 'principal').length} Principals
             </Badge>
@@ -499,7 +499,7 @@ const UserAccessManager: React.FC = () => {
                       User (Default)
                     </div>
                   </SelectItem>
-                  <SelectItem value="moderator">
+                  <SelectItem value="principal">
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4 text-purple-500" />
                       Principal
