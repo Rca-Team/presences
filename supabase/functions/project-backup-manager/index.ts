@@ -267,7 +267,12 @@ async function cleanCloud(svc: ReturnType<typeof createClient>, callerUserId: st
   }
 
   for (const table of DELETE_ORDER) {
-    await svc.from(table).delete();
+    let q = svc.from(table).delete().not("id", "is", null);
+    if (table === "user_roles" || table === "profiles") {
+      q = svc.from(table).delete().neq("user_id", callerUserId);
+    }
+    const { error } = await q;
+    if (error) console.error(`delete ${table}:`, error.message);
   }
 
   if (includeAuthUsers) {
@@ -297,13 +302,15 @@ async function restoreBackup(svc: ReturnType<typeof createClient>, backup: Backu
   }
 
   for (const table of DELETE_ORDER) {
-    await svc.from(table).delete();
+    const { error } = await svc.from(table).delete().not("id", "is", null);
+    if (error) console.error(`restore-clean ${table}:`, error.message);
   }
 
   for (const table of RESTORE_ORDER) {
     const rows = backup.tables?.[table] || [];
     if (!Array.isArray(rows) || rows.length === 0) continue;
-    await svc.from(table).insert(rows);
+    const { error } = await svc.from(table).insert(rows);
+    if (error) console.error(`insert ${table}:`, error.message);
   }
 
   for (const bucket of FACE_BUCKETS) {
