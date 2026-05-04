@@ -17,6 +17,8 @@ interface ProcessedFace {
   imageUrl?: string;
 }
 
+const STORAGE_BASE_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/face-images/`;
+
 const MultipleFaceAttendanceCapture = () => {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -582,7 +584,7 @@ const MultipleFaceAttendanceCapture = () => {
                         }`}>
                           {result.imageUrl ? (
                             <AvatarImage 
-                              src={result.imageUrl.startsWith('http') ? result.imageUrl : `https://pziiwqqnjwotqxvxdics.supabase.co/storage/v1/object/public/face-images/${result.imageUrl}`} 
+                              src={result.imageUrl.startsWith('http') ? result.imageUrl : `${STORAGE_BASE_URL}${result.imageUrl}`} 
                               alt={result.name} 
                               className="object-cover"
                             />

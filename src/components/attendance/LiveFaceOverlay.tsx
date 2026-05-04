@@ -4,6 +4,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { User, CheckCircle, AlertCircle, HelpCircle } from 'lucide-react';
 
+const STORAGE_BASE_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/face-images/`;
+
 export interface RecognizedFaceData {
   id: string;
   name: string;
@@ -93,7 +95,7 @@ const LiveFaceOverlay: React.FC<LiveFaceOverlayProps> = ({
                       <AvatarImage 
                         src={face.imageUrl.startsWith('http') || face.imageUrl.startsWith('data:') 
                           ? face.imageUrl 
-                          : `https://pziiwqqnjwotqxvxdics.supabase.co/storage/v1/object/public/face-images/${face.imageUrl}`
+                          : `${STORAGE_BASE_URL}${face.imageUrl}`
                         }
                         alt={face.name}
                         className="object-cover"

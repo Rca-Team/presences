@@ -14,6 +14,8 @@ import {
   Zap
 } from 'lucide-react';
 
+const STORAGE_BASE_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/face-images/`;
+
 interface AttendanceRecord {
   id: string;
   user_id: string | null;
@@ -41,7 +43,7 @@ const LiveAttendanceFeed: React.FC = () => {
       if (record.image_url.startsWith('data:') || record.image_url.startsWith('http')) {
         return record.image_url;
       }
-      return `https://pziiwqqnjwotqxvxdics.supabase.co/storage/v1/object/public/face-images/${record.image_url}`;
+      return `${STORAGE_BASE_URL}${record.image_url}`;
     }
     // Check metadata for firebase_image_url
     if (record.device_info?.metadata?.firebase_image_url) {

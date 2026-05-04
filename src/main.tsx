@@ -27,18 +27,29 @@ const unregisterStaleServiceWorkers = async () => {
 
 void unregisterStaleServiceWorkers();
 
-// One-time cleanup: drop the legacy IndexedDB face descriptor cache so the app
-// works exclusively against Lovable Cloud. Safe to run on every load.
-const dropLegacyFaceDescriptorDB = () => {
+// One-time local hard reset for remixed/forked projects:
+// clears old session/auth/cache/face data so the app starts fresh.
+const LOCAL_RESET_MARKER = 'presence_local_reset_v1_done';
+
+const resetLocalProjectDataOnce = () => {
   try {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem(LOCAL_RESET_MARKER) === '1') {
+      return;
+    }
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.clear();
+      localStorage.setItem(LOCAL_RESET_MARKER, '1');
+    }
+
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.clear();
+    }
+
     if (typeof indexedDB !== 'undefined' && 'deleteDatabase' in indexedDB) {
       indexedDB.deleteDatabase('FaceDescriptorCache');
     }
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('faceSamplesResetSnapshot');
-      localStorage.removeItem('offline_attendance_records');
-      localStorage.removeItem('pending_sync_count');
-    }
+
     // Remove any other legacy IndexedDB databases used by the app
     if (typeof indexedDB !== 'undefined' && (indexedDB as any).databases) {
       (indexedDB as any).databases().then((dbs: Array<{ name?: string }>) => {
@@ -48,11 +59,11 @@ const dropLegacyFaceDescriptorDB = () => {
       }).catch(() => {});
     }
   } catch (e) {
-    console.warn('Legacy descriptor cache cleanup skipped:', e);
+    console.warn('Local project reset skipped:', e);
   }
 };
 
-dropLegacyFaceDescriptorDB();
+resetLocalProjectDataOnce();
 
 
 // Improved model loading with retry mechanism
