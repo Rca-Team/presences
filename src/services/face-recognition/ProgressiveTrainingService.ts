@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { descriptorToString, stringToDescriptor } from './ModelService';
 import { uploadImage } from './StorageService';
+import { uploadAttendanceTrainingImage } from './TrainingDataStorageService';
 
 // Increased to 30 to support continuous learning from daily attendance.
 // More samples per user → better accuracy across lighting / angles / age changes.
@@ -86,6 +87,16 @@ export async function storeFaceSample(
         const fileName = `training_${userId}_${timestamp}.jpg`;
         const file = new File([imageBlob], fileName, { type: 'image/jpeg' });
         imageUrl = await uploadImage(file, `training/${userId}/${fileName}`);
+
+        // Store organized attendance training sample in dedicated bucket/folder hierarchy
+        await uploadAttendanceTrainingImage({
+          imageBlob,
+          studentId: userId,
+          status: 'present',
+          mode: 'ai-scan',
+          confidence,
+        });
+
         console.log('Training image uploaded:', imageUrl);
       } catch (uploadError) {
         console.error('Error uploading training image:', uploadError);

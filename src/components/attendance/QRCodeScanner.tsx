@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getAttendanceCutoffTime, isPastCutoffTime } from '@/services/attendance/AttendanceSettingsService';
+import { recordAttendance } from '@/services/face-recognition/RecognitionService';
 import {
   QrCode,
   Camera,
@@ -86,25 +87,29 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanComplete }) => {
       // Record attendance — use the admin-configured cutoff time
       const cutoff = await getAttendanceCutoffTime();
       const status = isPastCutoffTime(cutoff) ? 'late' : 'present';
-      
-      const { error } = await supabase
-        .from('attendance_records')
-        .insert({
-          user_id: qrData.id,
-          timestamp: new Date().toISOString(),
-          status,
-          device_info: {
-            type: 'qr_code',
-            scanned_at: new Date().toISOString(),
-            metadata: {
-              name: qrData.name,
-              employee_id: qrData.employee_id,
-              category: qrData.category
-            }
-          }
-        });
 
-      if (error) throw error;
+      // Capture current scanner frame for organized cloud training storage
+      let capturedImageDataUrl: string | undefined;
+      if (canvasRef.current) {
+        capturedImageDataUrl = canvasRef.current.toDataURL('image/jpeg', 0.85);
+      }
+      
+      await recordAttendance(
+        qrData.id,
+        status,
+        1,
+        {
+          type: 'qr_code',
+          scanned_at: new Date().toISOString(),
+          metadata: {
+            name: qrData.name,
+            employee_id: qrData.employee_id,
+            category: qrData.category,
+          },
+        },
+        capturedImageDataUrl,
+        'qr-scan',
+      );
 
       setScanResult({ success: true, name: qrData.name });
       

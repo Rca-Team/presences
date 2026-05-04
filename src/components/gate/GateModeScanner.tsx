@@ -449,7 +449,7 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
                 capCtx?.drawImage(videoRef.current, 0, 0);
                 capturedImageDataUrl = capCanvas.toDataURL('image/jpeg', 0.85);
               }
-               await recordAttendance(studentId, 'present', confidence, undefined, capturedImageDataUrl);
+               await recordAttendance(studentId, 'present', confidence, undefined, capturedImageDataUrl, 'gate-mode');
               
               // Send automatic email notification to parent
               const { data: profile } = await supabase

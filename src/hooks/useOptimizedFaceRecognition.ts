@@ -220,7 +220,8 @@ export const useOptimizedFaceRecognition = () => {
               status,
               recognitionResult.confidence,
               undefined,
-              capturedImageDataUrl
+              capturedImageDataUrl,
+              'ai-scan'
             );
 
             // Store face sample for progressive training

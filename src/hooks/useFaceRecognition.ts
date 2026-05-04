@@ -206,7 +206,8 @@ export const useFaceRecognition = () => {
         status, 
         recognitionResult.confidence,
         undefined,
-        capturedImageDataUrl
+        capturedImageDataUrl,
+        'ai-scan'
       );
       
       // Store face sample for progressive training (improves accuracy over time)
