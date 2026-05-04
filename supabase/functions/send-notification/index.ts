@@ -114,7 +114,7 @@ serve(async (req) => {
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
-      .in('role', ['admin', 'moderator'])
+      .in('role', ['admin', 'principal'])
       .maybeSingle();
 
     // Also check if user is a teacher with permissions
