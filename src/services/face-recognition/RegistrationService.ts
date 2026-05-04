@@ -34,6 +34,7 @@ export const registerFace = async (
     medical_info?: string;
     transport_mode?: string;
     class_section?: string;
+    address?: string;
   },
   category?: string
 ): Promise<any> => {
