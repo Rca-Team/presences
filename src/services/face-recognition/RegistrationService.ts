@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { uploadImage } from './StorageService';
 import { v4 as uuidv4 } from 'uuid';
 import { descriptorToString } from './ModelService';
+import { uploadRegistrationTrainingImage } from './TrainingDataStorageService';
 
 // Define an interface for the metadata to ensure type safety
 export interface RegistrationMetadata {
@@ -71,13 +72,23 @@ export const registerFace = async (
     const imageUrl = await uploadImage(file, filePath);
     console.log('Face image uploaded successfully:', imageUrl);
     
+    // Also save the same face in organized registration-training storage hierarchy
+    const registrationTrainingPath = await uploadRegistrationTrainingImage({
+      imageBlob,
+      studentId: employee_id || userId || uniqueId,
+      employeeId: employee_id,
+      category,
+      label: 'registration-primary',
+    });
+
     // Prepare metadata as a plain object that conforms to Json type
     const metadata: Record<string, any> = {
       name,
       employee_id,
       department,
       position,
-      firebase_image_url: imageUrl
+      firebase_image_url: imageUrl,
+      training_registration_path: registrationTrainingPath,
     };
 
     if (faceDescriptor) {
