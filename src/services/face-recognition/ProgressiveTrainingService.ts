@@ -113,7 +113,8 @@ export async function storeFaceSample(
         user_id: userId,
         descriptor: descriptorString,
         image_url: imageUrl,
-        label: userName
+        label: userName,
+        metadata: confidence === 1.0 ? { registration: 'true' } : {}
       });
 
     if (insertError) {
