@@ -332,10 +332,37 @@ const AdminFacesList: React.FC<AdminFacesListProps> = ({
     if (!confirm("Are you sure you want to delete this registered face?")) return;
     
     try {
-      const { error } = await supabase.from('attendance_records').delete().eq('id', id);
-      if (error) throw error;
-      
-      toast({ title: "Success", description: "Face data deleted successfully" });
+      // Find the face to get user_id / employee_id for full cleanup
+      const face = faces.find(f => f.id === id);
+      const userId = face?.user_id;
+      const employeeId = face?.employee_id;
+
+      // 1) Delete the registration attendance record
+      const { error: recErr } = await supabase.from('attendance_records').delete().eq('id', id);
+      if (recErr) throw recErr;
+
+      // 2) Delete all attendance_records for this user (so dashboards/notifications drop them)
+      if (userId) {
+        await supabase.from('attendance_records').delete().eq('user_id', userId);
+      }
+      if (employeeId && employeeId !== 'N/A') {
+        await supabase
+          .from('attendance_records')
+          .delete()
+          .or(`device_info->metadata->>employee_id.eq.${employeeId},device_info->>employee_id.eq.${employeeId}`);
+      }
+
+      // 3) Delete face descriptors (trained model slots) so Total Students drops
+      if (userId) {
+        await supabase.from('face_descriptors').delete().eq('user_id', userId);
+      }
+
+      // 4) Delete the profile so "Total Students" count (profiles count) drops
+      if (userId) {
+        await supabase.from('profiles').delete().eq('user_id', userId);
+      }
+
+      toast({ title: "Success", description: "Student fully removed" });
       if (id === selectedFaceId) setSelectedFaceId(null);
       await fetchRegisteredFaces();
     } catch (error) {
