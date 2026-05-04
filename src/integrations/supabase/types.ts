@@ -370,6 +370,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          label: string | null
           metadata: Json
           quality_score: number | null
           section: string | null
@@ -385,6 +386,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          label?: string | null
           metadata?: Json
           quality_score?: number | null
           section?: string | null
@@ -400,6 +402,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          label?: string | null
           metadata?: Json
           quality_score?: number | null
           section?: string | null
