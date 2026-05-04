@@ -48,13 +48,28 @@ function AnimatedRoutes() {
             <Dashboard />
           </ProtectedRoute>
         } />
+        <Route path="/principal" element={
+          <ProtectedRoute requireRoles={["admin", "principal"]}>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
         <Route path="/register" element={<Register />} />
         <Route path="/attendance" element={
           <ProtectedRoute requireRoles={["admin", "principal", "teacher", "user"]}>
             <Attendance />
           </ProtectedRoute>
         } />
+        <Route path="/user" element={
+          <ProtectedRoute requireRoles={["admin", "principal", "teacher", "user"]}>
+            <Attendance />
+          </ProtectedRoute>
+        } />
         <Route path="/admin" element={
+          <ProtectedRoute requireRoles={["admin", "principal", "teacher"]}>
+            <Admin />
+          </ProtectedRoute>
+        } />
+        <Route path="/teacher" element={
           <ProtectedRoute requireRoles={["admin", "principal", "teacher"]}>
             <Admin />
           </ProtectedRoute>
