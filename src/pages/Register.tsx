@@ -383,6 +383,19 @@ const Register = () => {
                         <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="student@school.edu" className="h-11 bg-white/50 dark:bg-slate-800/50 border-blue-100 dark:border-blue-900" />
                       </div>
 
+                      <div className="space-y-2">
+                        <Label htmlFor="address" className="flex items-center gap-2"><MapPin className="w-4 h-4 text-blue-500" />Address</Label>
+                        <textarea
+                          id="address"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          placeholder="House no., street, city, state, PIN"
+                          rows={2}
+                          className="w-full rounded-md border border-blue-100 dark:border-blue-900 bg-white/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
                       {/* Parent/Guardian */}
                       <div className="relative py-3">
                         <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-blue-100 dark:border-blue-900" /></div>
