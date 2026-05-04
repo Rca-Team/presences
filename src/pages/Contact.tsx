@@ -20,6 +20,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Card, CardContent } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 
 // Define form validation schema
 const formSchema = z.object({
@@ -45,16 +46,17 @@ const Contact = () => {
 
   const onSubmit = async (data: FormValues) => {
     try {
-      // In a real application, you would send this data to your backend
-      // For now, we'll simulate a successful submission
-      console.log("Form data to be sent:", {
-        ...data,
-        recipient: "gauravraj10226@gmail.com"
+      const { error } = await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'contact-form-message',
+          templateData: {
+            ...data,
+            submittedAt: new Date().toLocaleString('en-IN'),
+          },
+        },
       });
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      if (error) throw error;
+
       toast({
         title: "Message sent successfully",
         description: "Thank you for contacting us. We'll get back to you soon.",
@@ -142,7 +144,7 @@ const Contact = () => {
                         />
                       </FormControl>
                       <FormDescription>
-                        Your message will be sent to gauravraj10226@gmail.com
+                        Your message will be sent to rcaatl2022@gmail.com
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
