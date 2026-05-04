@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { descriptorToString, stringToDescriptor } from './ModelService';
 import { getAttendanceCutoffTime } from '../attendance/AttendanceSettingsService';
 import { getAllTrainedDescriptors } from './ProgressiveTrainingService';
+import { dataUrlToBlob, uploadAttendanceTrainingImage } from './TrainingDataStorageService';
 
 interface Employee {
   id: string;
@@ -34,6 +35,13 @@ interface DeviceInfo {
   registration?: boolean;
   firebase_image_url?: string;
 }
+
+const sanitizeSegment = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'unknown';
 
 /**
  * Parse a descriptor from various storage formats (string, array, object)
@@ -318,7 +326,8 @@ export async function recordAttendance(
   status: 'present' | 'late' | 'absent' | 'unauthorized',
   confidence?: number,
   deviceInfo?: any,
-  capturedImageDataUrl?: string
+  capturedImageDataUrl?: string,
+  captureMode: 'ai-scan' | 'qr-scan' | 'gate-mode' = 'ai-scan'
 ): Promise<any> {
   try {
     console.log(`Recording attendance for user ${userId} with status ${status}`);
@@ -370,18 +379,11 @@ export async function recordAttendance(
     
     // Upload captured image to storage if provided
     let uploadedImageUrl: string | null = null;
+    let trainingAttendancePath: string | null = null;
     if (capturedImageDataUrl) {
       try {
-        const base64Data = capturedImageDataUrl.split(',')[1];
-        if (base64Data) {
-          const byteCharacters = atob(base64Data);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: 'image/jpeg' });
-          
+        const blob = await dataUrlToBlob(capturedImageDataUrl);
+        if (blob) {
           const fileName = `attendance/${userId}/${Date.now()}.jpg`;
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('face-images')
@@ -396,6 +398,17 @@ export async function recordAttendance(
           } else {
             console.warn('Failed to upload captured image:', uploadError);
           }
+
+          // Keep an organized localized training copy in the dedicated attendance bucket
+          trainingAttendancePath = await uploadAttendanceTrainingImage({
+            imageBlob: blob,
+            studentId: userId,
+            status,
+            mode: captureMode,
+            confidence,
+            employeeId: deviceInfo?.metadata?.employee_id,
+            category: deviceInfo?.metadata?.category,
+          });
         }
       } catch (uploadErr) {
         console.warn('Image upload error:', uploadErr);
@@ -409,7 +422,9 @@ export async function recordAttendance(
       ...deviceInfo,
       metadata: {
         ...deviceInfo?.metadata,
-        name: userName || deviceInfo?.metadata?.name || 'Unknown'
+        name: userName || deviceInfo?.metadata?.name || 'Unknown',
+        capture_mode: sanitizeSegment(captureMode),
+        training_attendance_path: trainingAttendancePath,
       }
     };
     
