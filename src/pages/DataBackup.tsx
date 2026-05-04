@@ -50,20 +50,22 @@ const DataBackup = () => {
   const handleExport = async () => {
     try {
       setIsExporting(true);
-      const { data, error } = await supabase.functions.invoke<BackupResponse>('project-backup-manager', {
+      const { data, error } = await supabase.functions.invoke('project-backup-manager', {
         body: { action: 'export_backup' },
       });
 
-      if (error || !data?.backup) {
+      const typedData = data as BackupResponse | null;
+
+      if (error || !typedData?.backup) {
         throw new Error(error?.message || 'Failed to generate backup');
       }
 
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-      downloadJsonFile(`project-backup-${stamp}.json`, data.backup);
+      downloadJsonFile(`project-backup-${stamp}.json`, typedData.backup);
 
       toast({
         title: 'Backup created',
-        description: `Downloaded backup with ${data.stats?.users ?? 0} users and ${data.stats?.tables ?? 0} tables.`,
+        description: `Downloaded backup with ${typedData.stats?.users ?? 0} users and ${typedData.stats?.tables ?? 0} tables.`,
       });
     } catch (err: any) {
       toast({
