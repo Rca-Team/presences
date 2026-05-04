@@ -14,6 +14,723 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance_points: {
+        Row: {
+          awarded_at: string
+          created_at: string
+          id: string
+          metadata: Json
+          points: number
+          reason: string | null
+          student_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          awarded_at?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          points?: number
+          reason?: string | null
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          awarded_at?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          points?: number
+          reason?: string | null
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      attendance_predictions: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          factors: Json | null
+          id: string
+          metadata: Json
+          predicted_date: string | null
+          predicted_status: string | null
+          student_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          factors?: Json | null
+          id?: string
+          metadata?: Json
+          predicted_date?: string | null
+          predicted_status?: string | null
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          factors?: Json | null
+          id?: string
+          metadata?: Json
+          predicted_date?: string | null
+          predicted_status?: string | null
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      attendance_records: {
+        Row: {
+          capture_mode: string | null
+          category: string | null
+          class: string | null
+          confidence_score: number | null
+          created_at: string
+          device_info: Json | null
+          face_descriptor: Json | null
+          id: string
+          image_url: string | null
+          metadata: Json
+          roll_number: string | null
+          section: string | null
+          source: string | null
+          status: string | null
+          student_id: string | null
+          student_name: string | null
+          timestamp: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          capture_mode?: string | null
+          category?: string | null
+          class?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          device_info?: Json | null
+          face_descriptor?: Json | null
+          id?: string
+          image_url?: string | null
+          metadata?: Json
+          roll_number?: string | null
+          section?: string | null
+          source?: string | null
+          status?: string | null
+          student_id?: string | null
+          student_name?: string | null
+          timestamp?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          capture_mode?: string | null
+          category?: string | null
+          class?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          device_info?: Json | null
+          face_descriptor?: Json | null
+          id?: string
+          image_url?: string | null
+          metadata?: Json
+          roll_number?: string | null
+          section?: string | null
+          source?: string | null
+          status?: string | null
+          student_id?: string | null
+          student_name?: string | null
+          timestamp?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      class_leaderboard: {
+        Row: {
+          class: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          rank: number | null
+          score: number
+          section: string | null
+          student_id: string | null
+          student_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          class?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          rank?: number | null
+          score?: number
+          section?: string | null
+          student_id?: string | null
+          student_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          rank?: number | null
+          score?: number
+          section?: string | null
+          student_id?: string | null
+          student_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      class_teachers: {
+        Row: {
+          class: string
+          created_at: string
+          id: string
+          metadata: Json
+          section: string
+          teacher_id: string | null
+          teacher_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          class: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          section: string
+          teacher_id?: string | null
+          teacher_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          section?: string
+          teacher_id?: string | null
+          teacher_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      emergency_events: {
+        Row: {
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string | null
+          status: string | null
+          title: string | null
+          triggered_at: string
+          triggered_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          status?: string | null
+          title?: string | null
+          triggered_at?: string
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          status?: string | null
+          title?: string | null
+          triggered_at?: string
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      face_descriptors: {
+        Row: {
+          class: string | null
+          created_at: string
+          descriptor: Json | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          metadata: Json
+          quality_score: number | null
+          section: string | null
+          student_id: string | null
+          student_name: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          class?: string | null
+          created_at?: string
+          descriptor?: Json | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          metadata?: Json
+          quality_score?: number | null
+          section?: string | null
+          student_id?: string | null
+          student_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          class?: string | null
+          created_at?: string
+          descriptor?: Json | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          metadata?: Json
+          quality_score?: number | null
+          section?: string | null
+          student_id?: string | null
+          student_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      gate_entries: {
+        Row: {
+          class: string | null
+          confidence_score: number | null
+          created_at: string
+          device_info: Json | null
+          entry_time: string
+          exit_time: string | null
+          gate_name: string | null
+          id: string
+          is_recognized: boolean
+          metadata: Json
+          section: string | null
+          snapshot_url: string | null
+          student_id: string | null
+          student_name: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          class?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          device_info?: Json | null
+          entry_time?: string
+          exit_time?: string | null
+          gate_name?: string | null
+          id?: string
+          is_recognized?: boolean
+          metadata?: Json
+          section?: string | null
+          snapshot_url?: string | null
+          student_id?: string | null
+          student_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          class?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          device_info?: Json | null
+          entry_time?: string
+          exit_time?: string | null
+          gate_name?: string | null
+          id?: string
+          is_recognized?: boolean
+          metadata?: Json
+          section?: string | null
+          snapshot_url?: string | null
+          student_id?: string | null
+          student_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      late_entries: {
+        Row: {
+          approved_by: string | null
+          class: string | null
+          created_at: string
+          entry_time: string
+          id: string
+          metadata: Json
+          reason: string | null
+          section: string | null
+          student_id: string | null
+          student_name: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          class?: string | null
+          created_at?: string
+          entry_time?: string
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          section?: string | null
+          student_id?: string | null
+          student_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          class?: string | null
+          created_at?: string
+          entry_time?: string
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          section?: string | null
+          student_id?: string | null
+          student_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      notification_log: {
+        Row: {
+          channel: string | null
+          created_at: string
+          event_type: string | null
+          id: string
+          metadata: Json
+          payload: Json | null
+          sent_at: string | null
+          status: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          metadata?: Json
+          payload?: Json | null
+          sent_at?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          metadata?: Json
+          payload?: Json | null
+          sent_at?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string | null
+          metadata: Json
+          read_at: string | null
+          title: string | null
+          type: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string | null
+          metadata?: Json
+          read_at?: string | null
+          title?: string | null
+          type?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string | null
+          metadata?: Json
+          read_at?: string | null
+          title?: string | null
+          type?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      period_timings: {
+        Row: {
+          class: string | null
+          created_at: string
+          end_time: string
+          id: string
+          metadata: Json
+          period_name: string
+          section: string | null
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          class?: string | null
+          created_at?: string
+          end_time: string
+          id?: string
+          metadata?: Json
+          period_name: string
+          section?: string | null
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          class?: string | null
+          created_at?: string
+          end_time?: string
+          id?: string
+          metadata?: Json
+          period_name?: string
+          section?: string | null
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          class: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          metadata: Json
+          phone: string | null
+          role: string | null
+          section: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          class?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          metadata?: Json
+          phone?: string | null
+          role?: string | null
+          section?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          class?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          metadata?: Json
+          phone?: string | null
+          role?: string | null
+          section?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      student_badges: {
+        Row: {
+          awarded_at: string
+          badge_name: string | null
+          badge_type: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          student_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          awarded_at?: string
+          badge_name?: string | null
+          badge_type?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          awarded_at?: string
+          badge_name?: string | null
+          badge_type?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      subjects: {
+        Row: {
+          class: string | null
+          code: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          name: string
+          section: string | null
+          teacher_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          class?: string | null
+          code?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name: string
+          section?: string | null
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class?: string | null
+          code?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          section?: string | null
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      substitutions: {
+        Row: {
+          class: string | null
+          created_at: string
+          date: string
+          id: string
+          metadata: Json
+          notes: string | null
+          original_teacher_id: string | null
+          section: string | null
+          status: string | null
+          subject: string | null
+          substitute_teacher_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          class?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          original_teacher_id?: string | null
+          section?: string | null
+          status?: string | null
+          subject?: string | null
+          substitute_teacher_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          original_teacher_id?: string | null
+          section?: string | null
+          status?: string | null
+          subject?: string | null
+          substitute_teacher_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teacher_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          is_enabled: boolean
+          metadata: Json
+          permission_key: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          metadata?: Json
+          permission_key: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          metadata?: Json
+          permission_key?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -29,6 +746,81 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      wellness_scores: {
+        Row: {
+          created_at: string
+          id: string
+          measured_at: string
+          metadata: Json
+          mood: string | null
+          score: number | null
+          student_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          measured_at?: string
+          metadata?: Json
+          mood?: string | null
+          score?: number | null
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          measured_at?: string
+          metadata?: Json
+          mood?: string | null
+          score?: number | null
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      zone_entries: {
+        Row: {
+          action: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          occurred_at: string
+          student_id: string | null
+          student_name: string | null
+          updated_at: string
+          user_id: string | null
+          zone_name: string | null
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          student_id?: string | null
+          student_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+          zone_name?: string | null
+        }
+        Update: {
+          action?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          student_id?: string | null
+          student_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+          zone_name?: string | null
         }
         Relationships: []
       }
