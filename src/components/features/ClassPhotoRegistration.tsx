@@ -205,6 +205,7 @@ const ClassPhotoRegistration = () => {
           descriptor: Array.from(face.descriptor),
           label: face.name,
           image_url: urlData.publicUrl,
+          metadata: { registration: 'true' },
         });
 
         // Create registration record
