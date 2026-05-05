@@ -92,7 +92,8 @@ const StudentFaceSamplesManager: React.FC = () => {
         const di = r.device_info || {};
         const m = di.metadata || {};
         const empId = m.employee_id || m.roll_number || di.employee_id;
-        return (empId || r.user_id || r.id) as string | null;
+        // Prefer user_id so multiple records for the same auth user collapse to one group
+        return (r.user_id || empId || r.id) as string | null;
       };
 
       (allAttRes.data || []).forEach((r: any) => {

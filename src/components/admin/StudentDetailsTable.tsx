@@ -59,8 +59,8 @@ const StudentDetailsTable: React.FC = () => {
         const meta = deviceInfo?.metadata || {};
         const name = meta?.name || deviceInfo?.name || '';
         if (!name || name === 'Unknown' || name === 'User') return;
-        // Stable identity: employee/roll first, then user, then record id
-        const key = (meta?.employee_id || meta?.roll_number || deviceInfo?.employee_id || r.user_id || r.id) as string;
+        // Stable identity: user_id first (most reliable), then employee/roll, then record id
+        const key = (r.user_id || meta?.employee_id || meta?.roll_number || deviceInfo?.employee_id || r.id) as string;
         if (map.has(key)) return;
 
         let avatar = '';
