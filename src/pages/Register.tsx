@@ -164,7 +164,11 @@ const Register = () => {
           class_section: validData.department,
           address: validData.address,
         },
-        validData.department // category = class-section
+        validData.department, // category = class-section
+        {
+          sample_count: allDescriptors.length,
+          capture_mode: captureMode === 'auto' ? 'auto-10' : 'scan-3d',
+        }
       );
       if (registrationData) {
         // Store ALL 3D scan samples in face_descriptors for multi-angle matching
@@ -187,7 +191,10 @@ const Register = () => {
           console.log('All 3D scan samples stored successfully');
         }
         
-        toast({ title: "Registration Successful! 🎉", description: `Face registered with ${allDescriptors.length} 3D scan samples.` });
+        toast({
+          title: "Registration Successful! 🎉",
+          description: `3D face model saved with ${allDescriptors.length} training samples for best accuracy.`,
+        });
         setFormData({ name: '', email: '', phone: '', parentName: '', parentEmail: '', parentPhone: '', employeeId: '', department: '', position: '', rollNumber: '', bloodGroup: '', medicalInfo: '', transportMode: '', address: '' });
         setFaceImage(null);
         setFaceDescriptor(null);
@@ -469,7 +476,7 @@ const Register = () => {
                                 </div>
                                 <div>
                                   <p className="font-semibold text-lg text-green-600 dark:text-green-400">3D Scan Complete!</p>
-                                  <p className="text-sm text-muted-foreground">Multi-sample 3D face map for max accuracy</p>
+                                <p className="text-sm text-muted-foreground">{allDescriptors.length} samples saved for high-accuracy face model</p>
                                 </div>
                                 <Button type="button" variant="outline" onClick={() => { setFaceCaptured(false); setFaceImage(null); setFaceDescriptor(null); }}>
                                   <Camera className="w-4 h-4 mr-2" />Retake Scan

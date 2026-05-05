@@ -36,7 +36,11 @@ export const registerFace = async (
     class_section?: string;
     address?: string;
   },
-  category?: string
+  category?: string,
+  faceModel?: {
+    sample_count: number;
+    capture_mode: 'auto-10' | 'scan-3d';
+  }
 ): Promise<any> => {
   try {
     console.log('Starting face registration process', {
@@ -96,6 +100,13 @@ export const registerFace = async (
       faceDescriptorString = descriptorToString(faceDescriptor);
       console.log('Descriptor converted to string, length:', faceDescriptorString.length);
       metadata.faceDescriptor = faceDescriptorString;
+    }
+
+    if (faceModel) {
+      metadata.face_model = {
+        ...faceModel,
+        created_at: new Date().toISOString(),
+      };
     }
     
     // Create device info as a plain object that conforms to Json type
