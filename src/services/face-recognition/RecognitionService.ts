@@ -403,7 +403,7 @@ export async function recordAttendance(
           trainingAttendancePath = await uploadAttendanceTrainingImage({
             imageBlob: blob,
             studentId: userId,
-            status,
+            status: normalizedStatus as 'present' | 'late' | 'absent' | 'unauthorized',
             mode: captureMode,
             confidence,
             employeeId: deviceInfo?.metadata?.employee_id,

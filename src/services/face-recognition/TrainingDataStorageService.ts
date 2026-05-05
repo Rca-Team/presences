@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { uploadImage } from './StorageService';
 
 type AttendanceCaptureMode = 'ai-scan' | 'qr-scan' | 'gate-mode' | string;
 
@@ -98,25 +99,32 @@ export const uploadAttendanceTrainingImage = async (
   input: AttendanceTrainingUploadInput,
 ): Promise<string | null> => {
   const uploaderId = await getUploaderId();
-  if (!uploaderId) return null;
 
   const dateKey = new Date().toISOString().split('T')[0];
   const mode = sanitizeSegment(input.mode || 'ai-scan');
   const studentKey = sanitizeSegment(input.employeeId || input.studentId);
   const status = sanitizeSegment(input.status);
   const confidenceLabel = Math.round(((input.confidence ?? 1) * 100));
-  const path = `${uploaderId}/date-${dateKey}/mode-${mode}/student-${studentKey}/status-${status}/${Date.now()}-conf-${confidenceLabel}.jpg`;
+  const actorKey = sanitizeSegment(uploaderId || input.studentId || input.employeeId || 'unknown');
+  const path = `${actorKey}/date-${dateKey}/mode-${mode}/student-${studentKey}/status-${status}/${Date.now()}-conf-${confidenceLabel}.jpg`;
 
   const { error } = await supabase.storage
     .from('attendance-training-faces')
     .upload(path, input.imageBlob, { contentType: 'image/jpeg', upsert: false, cacheControl: '3600' });
 
-  if (error) {
-    console.warn('Attendance training upload failed:', error.message);
-    return null;
+  if (!error) {
+    return path;
   }
 
-  return path;
+  console.warn('Attendance training upload failed, using fallback bucket:', error.message);
+  try {
+    const file = new File([input.imageBlob], `${Date.now()}-conf-${confidenceLabel}.jpg`, { type: 'image/jpeg' });
+    const fallbackPath = `attendance-training/${path}`;
+    return await uploadImage(file, fallbackPath, 'face-images');
+  } catch (fallbackErr) {
+    console.warn('Attendance training fallback upload also failed:', fallbackErr);
+    return null;
+  }
 };
 
 export const uploadRegistrationFaceModel = async (
