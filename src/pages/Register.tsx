@@ -191,7 +191,10 @@ const Register = () => {
           console.log('All 3D scan samples stored successfully');
         }
         
-        toast({ title: "Registration Successful! 🎉", description: `Face registered with ${allDescriptors.length} 3D scan samples.` });
+        toast({
+          title: "Registration Successful! 🎉",
+          description: `3D face model saved with ${allDescriptors.length} training samples for best accuracy.`,
+        });
         setFormData({ name: '', email: '', phone: '', parentName: '', parentEmail: '', parentPhone: '', employeeId: '', department: '', position: '', rollNumber: '', bloodGroup: '', medicalInfo: '', transportMode: '', address: '' });
         setFaceImage(null);
         setFaceDescriptor(null);
