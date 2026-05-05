@@ -308,6 +308,7 @@ const FuturisticFaceScanner: React.FC<FuturisticFaceScannerProps> = ({ onScanCom
         20000,
         'Face detection timed out. Please ensure good lighting and try again.'
       );
+      const capturedImageDataUrl = webcamRef.current?.getScreenshot() || undefined;
 
       console.log(`Found ${fullDetections.length} faces to process`);
 
@@ -320,6 +321,7 @@ const FuturisticFaceScanner: React.FC<FuturisticFaceScannerProps> = ({ onScanCom
 
       // Process all detected faces
       const results: RecognizedFaceData[] = [];
+      const reviewQueue: PendingManualReview[] = [];
       let recognizedCount = 0;
 
       // Get cutoff time from settings - with timeout
@@ -348,40 +350,81 @@ const FuturisticFaceScanner: React.FC<FuturisticFaceScannerProps> = ({ onScanCom
           
           if (result.recognized && result.employee) {
             const status = isPastCutoff ? 'late' : 'present';
+            const strictMetrics = result.strictMetrics;
+            const strictScore = strictMetrics?.fusedScore ?? (result.confidence ?? 0);
+            const thresholdTarget = strictMetrics?.thresholdTarget ?? 0.99;
+            const autoMarkEligible = !!strictMetrics?.autoMarkEligible;
             
-            // Record attendance for each recognized face - with timeout
-            try {
-              await withTimeout(
-                recordAttendance(
-                  result.employee.id,
-                  status,
-                  result.confidence,
-                  { metadata: { name: result.employee.name } }
-                ),
-                5000,
-                'Attendance recording timed out'
-              );
-            } catch (recordErr) {
-              console.error('Failed to record attendance:', recordErr);
+            if (autoMarkEligible) {
+              try {
+                await withTimeout(
+                  recordAttendance(
+                    result.employee.id,
+                    status,
+                    result.confidence,
+                    {
+                      metadata: {
+                        name: result.employee.name,
+                        strict_mode: true,
+                        strict_fused_score: strictScore,
+                        strict_threshold_target: thresholdTarget,
+                      },
+                    },
+                    capturedImageDataUrl,
+                  ),
+                  5000,
+                  'Attendance recording timed out'
+                );
+                recognizedCount++;
+              } catch (recordErr) {
+                console.error('Failed to record attendance:', recordErr);
+              }
+
+              sendAutoParentNotification(
+                result.employee.id,
+                result.employee.name || 'Student',
+                status,
+                result.employee.avatar_url || result.employee.firebase_image_url
+              ).catch(err => console.error('Auto notification error:', err));
+
+              results.push({
+                id: result.employee.id,
+                name: result.employee.name || 'Unknown',
+                status,
+                confidence: (result.confidence ?? 0) * 100,
+                strictScore,
+                thresholdTarget,
+                imageUrl: result.employee.avatar_url || result.employee.firebase_image_url,
+                box: { x: box.x, y: box.y, width: box.width, height: box.height }
+              });
+            } else {
+              reviewQueue.push({
+                id: `${result.employee.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                employee: {
+                  id: result.employee.id,
+                  name: result.employee.name || 'Unknown',
+                  employee_id: result.employee.employee_id,
+                  avatar_url: result.employee.avatar_url,
+                  firebase_image_url: result.employee.firebase_image_url,
+                },
+                status,
+                confidence: result.confidence ?? 0,
+                strictScore,
+                thresholdTarget,
+                capturedImageDataUrl,
+              });
+
+              results.push({
+                id: `review-${result.employee.id}`,
+                name: result.employee.name || 'Unknown',
+                status: 'review',
+                confidence: (result.confidence ?? 0) * 100,
+                strictScore,
+                thresholdTarget,
+                imageUrl: result.employee.avatar_url || result.employee.firebase_image_url,
+                box: { x: box.x, y: box.y, width: box.width, height: box.height }
+              });
             }
-            
-            // Send automatic parent notification (non-blocking - fire and forget)
-            sendAutoParentNotification(
-              result.employee.id,
-              result.employee.name || 'Student',
-              status,
-              result.employee.avatar_url || result.employee.firebase_image_url
-            ).catch(err => console.error('Auto notification error:', err));
-            
-            results.push({
-              id: result.employee.id,
-              name: result.employee.name || 'Unknown',
-              status: status,
-              confidence: result.confidence ? result.confidence * 100 : 0,
-              imageUrl: result.employee.avatar_url || result.employee.firebase_image_url,
-              box: { x: box.x, y: box.y, width: box.width, height: box.height }
-            });
-            recognizedCount++;
           } else {
             results.push({
               id: `unknown-${Math.random().toString(36).substr(2, 9)}`,
@@ -407,6 +450,7 @@ const FuturisticFaceScanner: React.FC<FuturisticFaceScannerProps> = ({ onScanCom
       await new Promise(r => setTimeout(r, 300));
       setScanPhase('complete');
       setRecognizedFaces(results);
+      setPendingManualReviews(reviewQueue);
 
       // Set scan result for primary face (first recognized, or first in list)
       const primaryResult = results.find(r => r.status !== 'unrecognized') || results[0];
@@ -422,12 +466,20 @@ const FuturisticFaceScanner: React.FC<FuturisticFaceScannerProps> = ({ onScanCom
 
       // Show summary toast
       const unrecognizedCount = results.length - recognizedCount;
+      const reviewCount = reviewQueue.length;
       if (recognizedCount > 0) {
         toast({
           title: `✓ ${recognizedCount} Attendance${recognizedCount > 1 ? 's' : ''} Recorded`,
-          description: unrecognizedCount > 0 
-            ? `${unrecognizedCount} face${unrecognizedCount > 1 ? 's' : ''} not recognized`
-            : `All ${recognizedCount} face${recognizedCount > 1 ? 's' : ''} recognized!`,
+          description: reviewCount > 0
+            ? `${reviewCount} scan${reviewCount > 1 ? 's' : ''} requires manual confirmation`
+            : unrecognizedCount > 0
+              ? `${unrecognizedCount} face${unrecognizedCount > 1 ? 's' : ''} not recognized`
+              : `All ${recognizedCount} face${recognizedCount > 1 ? 's' : ''} auto-validated in strict mode!`,
+        });
+      } else if (reviewCount > 0) {
+        toast({
+          title: 'Manual Confirmation Required',
+          description: `${reviewCount} candidate${reviewCount > 1 ? 's' : ''} is below strict 99% threshold.`,
         });
       } else {
         toast({
