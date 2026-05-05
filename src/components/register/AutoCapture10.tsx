@@ -5,7 +5,12 @@ import { Button } from '@/components/ui/button';
 import { getFaceDescriptorFromImage } from '@/services/face-recognition/OptimizedRegistrationService';
 
 interface AutoCapture10Props {
-  onComplete: (averagedDescriptor: Float32Array, primaryImage: string, rawDescriptors: Float32Array[]) => void;
+  onComplete: (
+    averagedDescriptor: Float32Array,
+    primaryImage: string,
+    rawDescriptors: Float32Array[],
+    rawImages: string[]
+  ) => void;
   isModelLoading: boolean;
   totalShots?: number;
   durationMs?: number;
@@ -134,7 +139,8 @@ const AutoCapture10: React.FC<AutoCapture10Props> = ({
     onComplete(
       averaged,
       collected[0].image,
-      collected.map((c) => c.descriptor)
+      collected.map((c) => c.descriptor),
+      collected.map((c) => c.image)
     );
   }, [captureOne, cameraReady, done, durationMs, isModelLoading, isRunning, onComplete, totalShots]);
 

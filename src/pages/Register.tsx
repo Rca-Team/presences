@@ -64,6 +64,7 @@ const Register = () => {
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [faceDescriptor, setFaceDescriptor] = useState<Float32Array | null>(null);
   const [allDescriptors, setAllDescriptors] = useState<Float32Array[]>([]);
+  const [allFaceImages, setAllFaceImages] = useState<string[]>([]);
   const [registrationStep, setRegistrationStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(true);
@@ -111,10 +112,16 @@ const Register = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleMultiAngleComplete = (averaged: Float32Array, primaryImage: string, rawDescriptors: Float32Array[]) => {
+  const handleMultiAngleComplete = (
+    averaged: Float32Array,
+    primaryImage: string,
+    rawDescriptors: Float32Array[],
+    rawImages?: string[]
+  ) => {
     setFaceDescriptor(averaged);
     setFaceImage(primaryImage);
     setAllDescriptors(rawDescriptors);
+    setAllFaceImages(rawImages ?? []);
     setFaceCaptured(true);
     toast({ title: "3D Scan Complete! 🎉", description: `${rawDescriptors.length} angle samples captured for maximum accuracy.` });
   };
@@ -163,8 +170,19 @@ const Register = () => {
         // Store ALL 3D scan samples in face_descriptors for multi-angle matching
         if (allDescriptors.length > 0) {
           console.log(`Storing ${allDescriptors.length} 3D scan samples for user ${userId}`);
-           for (const descriptor of allDescriptors) {
-             await storeFaceSample(userId, descriptor, null, validData.name, 1.0);
+           for (let i = 0; i < allDescriptors.length; i++) {
+             const descriptor = allDescriptors[i];
+             const shotImage = allFaceImages[i];
+             let shotBlob: Blob | null = null;
+             if (shotImage) {
+               try {
+                 const shotRes = await fetch(shotImage);
+                 shotBlob = await shotRes.blob();
+               } catch (shotErr) {
+                 console.warn(`Could not convert captured shot #${i + 1} to blob`, shotErr);
+               }
+             }
+             await storeFaceSample(userId, descriptor, shotBlob, validData.name, 1.0);
           }
           console.log('All 3D scan samples stored successfully');
         }
@@ -174,6 +192,7 @@ const Register = () => {
         setFaceImage(null);
         setFaceDescriptor(null);
         setAllDescriptors([]);
+        setAllFaceImages([]);
         setFaceCaptured(false);
         setRegistrationStep(1);
       } else throw new Error("Registration failed");
