@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Loader2, Search, Download, Eye, ShieldAlert } from 'lucide-react';
 import {
   CartesianGrid,
@@ -19,6 +19,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 type FaceModelArtifact = {
   version?: string;
@@ -46,6 +48,139 @@ type RegistrationRecord = {
       };
     };
   } | null;
+};
+
+type PointCloudPoint = { id: number; x: number; y: number; z: number };
+
+const PointCloud3DViewer = ({ points }: { points: PointCloudPoint[] }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const normalizedPoints = useMemo(() => {
+    const validPoints = points.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z));
+    if (validPoints.length === 0) return [] as PointCloudPoint[];
+
+    const xs = validPoints.map((p) => p.x);
+    const ys = validPoints.map((p) => p.y);
+    const zs = validPoints.map((p) => p.z);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const minZ = Math.min(...zs);
+    const maxZ = Math.max(...zs);
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+    const span = Math.max(maxX - minX, maxY - minY, maxZ - minZ, 1e-6);
+    const scale = 3 / span;
+
+    return validPoints.map((point) => ({
+      ...point,
+      x: (point.x - centerX) * scale,
+      y: (point.y - centerY) * scale,
+      z: (point.z - centerZ) * scale,
+    }));
+  }, [points]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const styles = getComputedStyle(document.documentElement);
+    const colorFromToken = (token: string, fallback: string) => {
+      const value = styles.getPropertyValue(token).trim();
+      return value ? `hsl(${value})` : fallback;
+    };
+
+    const width = container.clientWidth || 600;
+    const height = container.clientHeight || 320;
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(colorFromToken('--background', '#0b1020'));
+
+    const camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 1000);
+    camera.position.set(2.4, 2.2, 2.4);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(width, height);
+    container.innerHTML = '';
+    container.appendChild(renderer.domElement);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+    const pointLight = new THREE.PointLight(0xffffff, 1);
+    pointLight.position.set(3, 4, 5);
+    scene.add(ambient, pointLight);
+
+    const grid = new THREE.GridHelper(8, 8, new THREE.Color(colorFromToken('--border', '#334155')), new THREE.Color(colorFromToken('--accent', '#1e293b')));
+    scene.add(grid);
+    scene.add(new THREE.AxesHelper(2));
+
+    if (normalizedPoints.length > 0) {
+      const positions = new Float32Array(normalizedPoints.length * 3);
+      normalizedPoints.forEach((point, index) => {
+        const base = index * 3;
+        positions[base] = point.x;
+        positions[base + 1] = point.y;
+        positions[base + 2] = point.z;
+      });
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      const material = new THREE.PointsMaterial({
+        color: new THREE.Color(colorFromToken('--primary', '#22d3ee')),
+        size: 0.09,
+        sizeAttenuation: true,
+      });
+
+      const cloud = new THREE.Points(geometry, material);
+      scene.add(cloud);
+    }
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enablePan = true;
+    controls.enableZoom = true;
+    controls.enableRotate = true;
+    controls.target.set(0, 0, 0);
+    controls.update();
+
+    let frameId = 0;
+    const animate = () => {
+      controls.update();
+      renderer.render(scene, camera);
+      frameId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    const onResize = () => {
+      const nextWidth = container.clientWidth || 600;
+      const nextHeight = container.clientHeight || 320;
+      camera.aspect = nextWidth / nextHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(nextWidth, nextHeight);
+    };
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', onResize);
+      controls.dispose();
+
+      scene.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
+        if (Array.isArray(material)) material.forEach((m) => m.dispose());
+        else if (material) material.dispose();
+      });
+
+      renderer.dispose();
+      if (renderer.domElement.parentNode === container) {
+        container.removeChild(renderer.domElement);
+      }
+    };
+  }, [normalizedPoints]);
+
+  return <div ref={containerRef} className="h-full w-full" aria-label="3D point cloud viewer" />;
 };
 
 const FaceModelValidator = () => {
@@ -256,16 +391,8 @@ const FaceModelValidator = () => {
                     <CardTitle>point_cloud_3d_equivalent</CardTitle>
                     <CardDescription>Stored 3D-equivalent points projected on X/Y with Z in tooltip.</CardDescription>
                   </CardHeader>
-                  <CardContent className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ScatterChart margin={{ top: 12, right: 12, left: 8, bottom: 8 }}>
-                        <CartesianGrid />
-                        <XAxis type="number" dataKey="x" name="x" />
-                        <YAxis type="number" dataKey="y" name="y" />
-                        <RechartsTooltip formatter={(value, name) => [Number(value).toFixed(6), String(name)]} />
-                        <Scatter name="point_cloud_3d_equivalent" data={pointCloudScatter} fill="var(--accent)" />
-                      </ScatterChart>
-                    </ResponsiveContainer>
+                  <CardContent className="h-80 overflow-hidden rounded-md border">
+                    <PointCloud3DViewer points={pointCloudScatter} />
                   </CardContent>
                 </Card>
               </div>
