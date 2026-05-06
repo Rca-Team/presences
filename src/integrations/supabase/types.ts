@@ -446,6 +446,7 @@ export type Database = {
           entry_time: string
           exit_time: string | null
           gate_name: string | null
+          gate_session_id: string | null
           id: string
           is_recognized: boolean
           metadata: Json
@@ -464,6 +465,7 @@ export type Database = {
           entry_time?: string
           exit_time?: string | null
           gate_name?: string | null
+          gate_session_id?: string | null
           id?: string
           is_recognized?: boolean
           metadata?: Json
@@ -482,6 +484,7 @@ export type Database = {
           entry_time?: string
           exit_time?: string | null
           gate_name?: string | null
+          gate_session_id?: string | null
           id?: string
           is_recognized?: boolean
           metadata?: Json
@@ -491,6 +494,48 @@ export type Database = {
           student_name?: string | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      gate_sessions: {
+        Row: {
+          created_at: string
+          device_info: Json | null
+          ended_at: string | null
+          gate_name: string
+          id: string
+          metadata: Json
+          started_at: string
+          started_by: string | null
+          total_entries: number
+          unknown_entries: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_info?: Json | null
+          ended_at?: string | null
+          gate_name: string
+          id?: string
+          metadata?: Json
+          started_at?: string
+          started_by?: string | null
+          total_entries?: number
+          unknown_entries?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_info?: Json | null
+          ended_at?: string | null
+          gate_name?: string
+          id?: string
+          metadata?: Json
+          started_at?: string
+          started_by?: string | null
+          total_entries?: number
+          unknown_entries?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -707,6 +752,36 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      school_gates: {
+        Row: {
+          created_at: string
+          gate_type: string
+          id: string
+          is_active: boolean
+          metadata: Json
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gate_type?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gate_type?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
