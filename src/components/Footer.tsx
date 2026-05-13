@@ -54,10 +54,19 @@ const Footer = () => {
         </div>
       </div>
       
-      <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Presence. All rights reserved. <span className="font-medium">Made by Gaurav</span>
-        </p>
+      <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-3">
+        <div className="text-sm text-muted-foreground text-center md:text-left space-y-1">
+          <p>© {new Date().getFullYear()} Presence. All rights reserved.</p>
+          <p>
+            <span className="font-semibold text-foreground">Powered by RCA</span>
+            {' • '}
+            Made by <span className="font-semibold text-foreground">Gaurav Raj</span>
+            <span className="text-xs"> (Main Developer & Team Leader)</span>
+            {' & '}
+            <span className="font-semibold text-foreground">Jatin Dhama</span>
+            <span className="text-xs"> (Member)</span>
+          </p>
+        </div>
         <div className="flex space-x-4 mt-4 md:mt-0">
           {['Twitter', 'LinkedIn', 'GitHub'].map((item) => (
             <Link key={item} to="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">

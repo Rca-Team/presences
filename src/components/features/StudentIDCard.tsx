@@ -45,7 +45,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
 
 const StudentIDCard: React.FC<StudentIDCardProps> = ({ 
   student, 
-  schoolName = "Face Attendance School",
+  schoolName = "PM SHRI Kendriya Vidyalaya NFC Vigyan Vihar, Delhi",
   schoolLogo 
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -249,7 +249,7 @@ const StudentIDCard: React.FC<StudentIDCardProps> = ({
                 <Calendar className="h-3 w-3" />
                 Valid: {format(new Date(), 'yyyy')} - {format(new Date().setFullYear(new Date().getFullYear() + 1), 'yyyy')}
               </div>
-              <p className="text-white/40 text-[10px]">Powered by Face Attendance</p>
+              <p className="text-white/40 text-[10px]">Powered by RCA · Gaurav Raj & Jatin Dhama</p>
             </div>
           </div>
         </div>

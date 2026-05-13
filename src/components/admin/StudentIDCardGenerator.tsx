@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getCategoryLabel } from '@/constants/schoolConfig';
+import kvLogo from '@/assets/kv-logo.png';
 import { 
   CreditCard, 
   Download, 
@@ -39,9 +40,11 @@ interface StudentIDCardGeneratorProps {
   students?: StudentData[];
 }
 
-const SCHOOL_NAME = 'Presences Smart School';
-const SCHOOL_TAGLINE = 'Excellence in Education';
-const SCHOOL_ADDRESS = 'Smart Campus, Education City';
+const SCHOOL_NAME = 'PM SHRI Kendriya Vidyalaya';
+const SCHOOL_SUBNAME = 'NFC Vigyan Vihar, Delhi';
+const SCHOOL_TAGLINE = 'तत् त्वम् पूषन् अपावृणु';
+const SCHOOL_ADDRESS = 'Vigyan Vihar, New Delhi – 110092 | Affiliated to CBSE';
+const SCHOOL_AFFILIATION = 'Under Kendriya Vidyalaya Sangathan, Min. of Education, Govt. of India';
 const ACADEMIC_YEAR = '2025–2026';
 
 const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ students: propStudents }) => {
@@ -152,22 +155,29 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
         <!-- Top Header Band -->
         <div style="
           background: linear-gradient(135deg, #1e3a5f 0%, #0d2137 100%);
-          padding: 14px 16px 12px;
-          text-align: center;
+          padding: 12px 14px 10px;
           position: relative;
         ">
           <div style="
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             background: repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 8px);
           "></div>
-          <div style="position: relative; z-index: 1;">
-            <div style="font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: 1px; text-transform: uppercase;">
-              ${SCHOOL_NAME}
+          <div style="position: relative; z-index: 1; display: flex; align-items: center; gap: 10px;">
+            <img src="${kvLogo}" crossorigin="anonymous" style="width: 52px; height: 52px; flex-shrink: 0; background: #ffffff; border-radius: 50%; padding: 2px; object-fit: contain;" />
+            <div style="flex: 1; text-align: left; min-width: 0;">
+              <div style="font-size: 14px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; line-height: 1.1;">
+                ${SCHOOL_NAME}
+              </div>
+              <div style="font-size: 11px; font-weight: 700; color: #fbbf24; line-height: 1.2; margin-top: 1px;">
+                ${SCHOOL_SUBNAME}
+              </div>
+              <div style="font-size: 9px; color: #93c5fd; margin-top: 2px; font-style: italic;">
+                ${SCHOOL_TAGLINE}
+              </div>
             </div>
-            <div style="font-size: 10px; color: #93c5fd; margin-top: 2px; letter-spacing: 1.5px; text-transform: uppercase;">
-              ${SCHOOL_TAGLINE}
-            </div>
-            <div style="font-size: 9px; color: #94a3b8; margin-top: 3px;">${SCHOOL_ADDRESS}</div>
+          </div>
+          <div style="position: relative; z-index: 1; font-size: 8px; color: #cbd5e1; margin-top: 6px; text-align: center; line-height: 1.3;">
+            ${SCHOOL_ADDRESS}<br/>${SCHOOL_AFFILIATION}
           </div>
         </div>
 
@@ -238,6 +248,14 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
                 <td style="padding: 5px 0; font-size: 11px; color: #64748b; vertical-align: top;">Address</td>
                 <td style="padding: 5px 0; font-size: 11px; font-weight: 600; color: #1e3a5f; line-height: 1.4;">: ${student.address}</td>
               </tr>` : ''}
+              <tr>
+                <td style="padding: 5px 0; font-size: 11px; color: #64748b;">Issued On</td>
+                <td style="padding: 5px 0; font-size: 12px; font-weight: 600; color: #1e3a5f;">: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-size: 11px; color: #64748b;">Valid Till</td>
+                <td style="padding: 5px 0; font-size: 12px; font-weight: 700; color: #dc2626;">: 31 Mar ${ACADEMIC_YEAR.split('–')[1]}</td>
+              </tr>
             </table>
           </div>
         </div>
@@ -254,23 +272,28 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
           ">
             <img src="data:image/svg+xml;base64,${qrBase64}" style="width: 100%; height: 100%;" />
           </div>
-          <div style="flex: 1; text-align: right; padding-left: 12px;">
-            <div style="font-size: 9px; color: #94a3b8; margin-bottom: 4px;">Scan for attendance</div>
-            <div style="font-size: 9px; color: #94a3b8; line-height: 1.4;">
-              This card is the property of the school.<br/>
-              If found, please return to the school office.
+          <div style="flex: 1; padding-left: 12px;">
+            <div style="font-size: 9px; color: #94a3b8; margin-bottom: 3px;">Scan for verification</div>
+            <div style="text-align: center; padding-top: 14px; border-top: 1px dashed #cbd5e1; margin-top: 6px;">
+              <div style="font-size: 9px; font-weight: 700; color: #1e3a5f;">Principal</div>
+              <div style="font-size: 8px; color: #94a3b8;">Signature & Seal</div>
             </div>
           </div>
+        </div>
+
+        <!-- Emergency note -->
+        <div style="padding: 4px 16px 0; font-size: 8px; color: #64748b; text-align: center; line-height: 1.3;">
+          If found, please return to <strong>PM SHRI K.V. NFC Vigyan Vihar, Delhi</strong> · Tel: 011-22154398
         </div>
 
         <!-- Bottom Band -->
         <div style="
           margin-top: auto; position: absolute; bottom: 0; left: 0; right: 0;
           background: linear-gradient(135deg, #1e3a5f 0%, #0d2137 100%);
-          padding: 8px 16px; text-align: center;
-          font-size: 9px; color: #93c5fd; letter-spacing: 0.5px;
+          padding: 7px 16px; text-align: center;
+          font-size: 8px; color: #93c5fd; letter-spacing: 0.4px;
         ">
-          Powered by Presences AI • Smart Attendance System
+          Powered by RCA · Made by Gaurav Raj & Jatin Dhama
         </div>
       </div>
     `;
@@ -513,15 +536,21 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
                   className="w-full rounded-2xl overflow-hidden shadow-2xl bg-white text-[#1a1a2e]"
                 >
                   {/* Header */}
-                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#0d2137] p-3 text-center relative">
+                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#0d2137] p-3 relative">
                     <div className="absolute inset-0 opacity-10" style={{
                       background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 8px)'
                     }} />
-                    <div className="relative z-10">
-                      <p className="text-white font-extrabold text-sm sm:text-base tracking-wider uppercase">{SCHOOL_NAME}</p>
-                      <p className="text-blue-300 text-[9px] sm:text-[10px] tracking-widest uppercase mt-0.5">{SCHOOL_TAGLINE}</p>
-                      <p className="text-slate-400 text-[8px] sm:text-[9px] mt-1">{SCHOOL_ADDRESS}</p>
+                    <div className="relative z-10 flex items-center gap-2.5">
+                      <img src={kvLogo} alt="KV Logo" loading="lazy" width={52} height={52} className="w-12 h-12 flex-shrink-0 bg-white rounded-full p-0.5 object-contain" />
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-white font-extrabold text-[13px] sm:text-sm leading-tight">{SCHOOL_NAME}</p>
+                        <p className="text-amber-400 font-bold text-[11px] leading-tight">{SCHOOL_SUBNAME}</p>
+                        <p className="text-blue-300 text-[9px] italic mt-0.5">{SCHOOL_TAGLINE}</p>
+                      </div>
                     </div>
+                    <p className="relative z-10 text-slate-300 text-[8px] mt-1.5 text-center leading-snug">
+                      {SCHOOL_ADDRESS}<br/>{SCHOOL_AFFILIATION}
+                    </p>
                   </div>
 
                   {/* Accent Stripe */}
@@ -568,33 +597,37 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
                     </div>
                   </div>
 
-                  {/* QR + Note */}
-                  <div className="flex items-center justify-between px-3 sm:px-4 pt-2.5 pb-2">
-                    <div className="border-2 border-slate-200 rounded-lg p-1">
-                      <QRCodeSVG
-                        value={JSON.stringify({
-                          type: 'student_id',
-                          id: previewStudent.id,
-                          name: previewStudent.name,
-                          employee_id: previewStudent.employee_id
-                        })}
-                        size={56}
-                        fgColor="#1e3a5f"
-                      />
+                  {/* QR + Signature */}
+                  <div className="flex items-end justify-between px-3 sm:px-4 pt-2.5 pb-1.5 gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className="border-2 border-slate-200 rounded-lg p-1">
+                        <QRCodeSVG
+                          value={JSON.stringify({
+                            type: 'student_id',
+                            id: previewStudent.id,
+                            name: previewStudent.name,
+                            employee_id: previewStudent.employee_id
+                          })}
+                          size={56}
+                          fgColor="#1e3a5f"
+                        />
+                      </div>
+                      <p className="text-[8px] text-slate-400 mt-1">Scan to verify</p>
                     </div>
-                    <div className="flex-1 text-right pl-3">
-                      <p className="text-[8px] sm:text-[9px] text-slate-400 mb-1">Scan for attendance</p>
-                      <p className="text-[7px] sm:text-[8px] text-slate-400 leading-relaxed">
-                        This card is the property of the school.<br />
-                        If found, please return to the school office.
-                      </p>
+                    <div className="flex-1 text-center border-t border-dashed border-slate-300 pt-1">
+                      <p className="text-[10px] font-bold text-[#1e3a5f]">Principal</p>
+                      <p className="text-[8px] text-slate-400">Signature & Seal</p>
                     </div>
                   </div>
 
+                  <p className="px-3 text-center text-[8px] text-slate-500 leading-snug pb-1.5">
+                    If found, please return to <strong>PM SHRI K.V. NFC Vigyan Vihar, Delhi</strong> · Tel: 011-22154398
+                  </p>
+
                   {/* Footer */}
-                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#0d2137] px-3 py-2 text-center">
-                    <p className="text-[8px] sm:text-[9px] text-blue-300 tracking-wider">
-                      Powered by Presences AI • Smart Attendance System
+                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#0d2137] px-3 py-1.5 text-center">
+                    <p className="text-[8px] sm:text-[9px] text-blue-300 tracking-wide">
+                      Powered by RCA · Made by Gaurav Raj & Jatin Dhama
                     </p>
                   </div>
                 </div>
