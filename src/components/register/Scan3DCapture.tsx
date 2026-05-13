@@ -5,7 +5,12 @@ import { Button } from '@/components/ui/button';
 import { getFaceDescriptorFromImage, detectFaceInVideo, getFaceBoxFromImage } from '@/services/face-recognition/OptimizedRegistrationService';
 
 interface Scan3DCaptureProps {
-  onComplete: (averagedDescriptor: Float32Array, primaryImage: string, allDescriptors: Float32Array[]) => void;
+  onComplete: (
+    averagedDescriptor: Float32Array,
+    primaryImage: string,
+    allDescriptors: Float32Array[],
+    rawImages?: string[]
+  ) => void;
   isModelLoading: boolean;
 }
 
@@ -143,6 +148,7 @@ const Scan3DCapture: React.FC<Scan3DCaptureProps> = ({ onComplete, isModelLoadin
   const [statusText, setStatusText] = useState('Position your face in the frame');
 
   const descriptorsRef = useRef<Float32Array[]>([]);
+  const sampleImagesRef = useRef<string[]>([]);
   const scanStartRef = useRef<number>(0);
   const animFrameRef = useRef<number>(0);
   const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -389,6 +395,7 @@ const Scan3DCapture: React.FC<Scan3DCaptureProps> = ({ onComplete, isModelLoadin
     setProgress(0);
     setSamplesCollected(0);
     descriptorsRef.current = [];
+    sampleImagesRef.current = [];
     scanStartRef.current = Date.now();
     setStatusText('Slowly turn your head in a circle...');
     soundRef.current.playScanStart();
@@ -450,6 +457,20 @@ const Scan3DCapture: React.FC<Scan3DCaptureProps> = ({ onComplete, isModelLoadin
         const descriptor = await getFaceDescriptorFromImage(videoRef.current);
         if (descriptor) {
           descriptorsRef.current.push(descriptor);
+          // Capture a per-sample snapshot so every training descriptor has its own image
+          try {
+            const v = videoRef.current;
+            if (v && canvasRef.current && v.videoWidth > 0) {
+              const snap = document.createElement('canvas');
+              snap.width = v.videoWidth;
+              snap.height = v.videoHeight;
+              const sctx = snap.getContext('2d');
+              if (sctx) {
+                sctx.drawImage(v, 0, 0);
+                sampleImagesRef.current.push(snap.toDataURL('image/jpeg', 0.9));
+              }
+            }
+          } catch {}
           setSamplesCollected(descriptorsRef.current.length);
           soundRef.current.playSampleBeep();
         }
@@ -523,7 +544,7 @@ const Scan3DCapture: React.FC<Scan3DCaptureProps> = ({ onComplete, isModelLoadin
     soundRef.current.playComplete();
     setScanComplete(true);
     setStatusText(`3D scan complete! ${descriptors.length} samples captured.`);
-    onComplete(averaged, finalImage, descriptors);
+    onComplete(averaged, finalImage, descriptors, sampleImagesRef.current.slice());
   }, [onComplete, primaryImage]);
 
   const resetScan = () => {
@@ -533,6 +554,7 @@ const Scan3DCapture: React.FC<Scan3DCaptureProps> = ({ onComplete, isModelLoadin
     setProgress(0);
     setSamplesCollected(0);
     descriptorsRef.current = [];
+    sampleImagesRef.current = [];
     setPrimaryImage(null);
     setStatusText('Position your face in the frame');
   };
