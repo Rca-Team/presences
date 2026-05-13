@@ -536,15 +536,21 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
                   className="w-full rounded-2xl overflow-hidden shadow-2xl bg-white text-[#1a1a2e]"
                 >
                   {/* Header */}
-                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#0d2137] p-3 text-center relative">
+                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#0d2137] p-3 relative">
                     <div className="absolute inset-0 opacity-10" style={{
                       background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 8px)'
                     }} />
-                    <div className="relative z-10">
-                      <p className="text-white font-extrabold text-sm sm:text-base tracking-wider uppercase">{SCHOOL_NAME}</p>
-                      <p className="text-blue-300 text-[9px] sm:text-[10px] tracking-widest uppercase mt-0.5">{SCHOOL_TAGLINE}</p>
-                      <p className="text-slate-400 text-[8px] sm:text-[9px] mt-1">{SCHOOL_ADDRESS}</p>
+                    <div className="relative z-10 flex items-center gap-2.5">
+                      <img src={kvLogo} alt="KV Logo" loading="lazy" width={52} height={52} className="w-12 h-12 flex-shrink-0 bg-white rounded-full p-0.5 object-contain" />
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-white font-extrabold text-[13px] sm:text-sm leading-tight">{SCHOOL_NAME}</p>
+                        <p className="text-amber-400 font-bold text-[11px] leading-tight">{SCHOOL_SUBNAME}</p>
+                        <p className="text-blue-300 text-[9px] italic mt-0.5">{SCHOOL_TAGLINE}</p>
+                      </div>
                     </div>
+                    <p className="relative z-10 text-slate-300 text-[8px] mt-1.5 text-center leading-snug">
+                      {SCHOOL_ADDRESS}<br/>{SCHOOL_AFFILIATION}
+                    </p>
                   </div>
 
                   {/* Accent Stripe */}
@@ -591,33 +597,37 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
                     </div>
                   </div>
 
-                  {/* QR + Note */}
-                  <div className="flex items-center justify-between px-3 sm:px-4 pt-2.5 pb-2">
-                    <div className="border-2 border-slate-200 rounded-lg p-1">
-                      <QRCodeSVG
-                        value={JSON.stringify({
-                          type: 'student_id',
-                          id: previewStudent.id,
-                          name: previewStudent.name,
-                          employee_id: previewStudent.employee_id
-                        })}
-                        size={56}
-                        fgColor="#1e3a5f"
-                      />
+                  {/* QR + Signature */}
+                  <div className="flex items-end justify-between px-3 sm:px-4 pt-2.5 pb-1.5 gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className="border-2 border-slate-200 rounded-lg p-1">
+                        <QRCodeSVG
+                          value={JSON.stringify({
+                            type: 'student_id',
+                            id: previewStudent.id,
+                            name: previewStudent.name,
+                            employee_id: previewStudent.employee_id
+                          })}
+                          size={56}
+                          fgColor="#1e3a5f"
+                        />
+                      </div>
+                      <p className="text-[8px] text-slate-400 mt-1">Scan to verify</p>
                     </div>
-                    <div className="flex-1 text-right pl-3">
-                      <p className="text-[8px] sm:text-[9px] text-slate-400 mb-1">Scan for attendance</p>
-                      <p className="text-[7px] sm:text-[8px] text-slate-400 leading-relaxed">
-                        This card is the property of the school.<br />
-                        If found, please return to the school office.
-                      </p>
+                    <div className="flex-1 text-center border-t border-dashed border-slate-300 pt-1">
+                      <p className="text-[10px] font-bold text-[#1e3a5f]">Principal</p>
+                      <p className="text-[8px] text-slate-400">Signature & Seal</p>
                     </div>
                   </div>
 
+                  <p className="px-3 text-center text-[8px] text-slate-500 leading-snug pb-1.5">
+                    If found, please return to <strong>PM SHRI K.V. NFC Vigyan Vihar, Delhi</strong> · Tel: 011-22154398
+                  </p>
+
                   {/* Footer */}
-                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#0d2137] px-3 py-2 text-center">
-                    <p className="text-[8px] sm:text-[9px] text-blue-300 tracking-wider">
-                      Powered by Presences AI • Smart Attendance System
+                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#0d2137] px-3 py-1.5 text-center">
+                    <p className="text-[8px] sm:text-[9px] text-blue-300 tracking-wide">
+                      Powered by RCA · Made by Gaurav Raj & Jatin Dhama
                     </p>
                   </div>
                 </div>
