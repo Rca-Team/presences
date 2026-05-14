@@ -390,6 +390,91 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
     }
   };
 
+  /**
+   * Build a multi-page A4 PDF that lays out ID cards at the standard
+   * ISO/IEC 7810 ID-1 portrait size (54 mm × 85.6 mm). On a 210 × 297 mm
+   * A4 sheet with 8 mm margin and 4 mm gutter we fit 3 cols × 3 rows = 9
+   * cards per page — saves paper and prints at real-world card size.
+   */
+  const buildPDFFromStudents = async (
+    list: StudentData[],
+    opts: { autoPrint?: boolean; filename?: string }
+  ) => {
+    if (list.length === 0) {
+      toast({ title: 'No Students', description: 'Nothing to export', variant: 'destructive' });
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      // A4 portrait in mm
+      const PAGE_W = 210, PAGE_H = 297;
+      const MARGIN = 8, GUTTER = 4;
+      const CARD_W = 54, CARD_H = 85.6; // CR80 portrait
+      const COLS = Math.floor((PAGE_W - 2 * MARGIN + GUTTER) / (CARD_W + GUTTER)); // 3
+      const ROWS = Math.floor((PAGE_H - 2 * MARGIN + GUTTER) / (CARD_H + GUTTER)); // 3
+      const PER_PAGE = COLS * ROWS;
+
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+      for (let i = 0; i < list.length; i++) {
+        const idxOnPage = i % PER_PAGE;
+        if (i > 0 && idxOnPage === 0) pdf.addPage();
+
+        const dataUrl = await generateIDCard(list[i]);
+
+        const col = idxOnPage % COLS;
+        const row = Math.floor(idxOnPage / COLS);
+        const x = MARGIN + col * (CARD_W + GUTTER);
+        const y = MARGIN + row * (CARD_H + GUTTER);
+
+        pdf.addImage(dataUrl, 'PNG', x, y, CARD_W, CARD_H, undefined, 'FAST');
+
+        // Light cut guides at corners
+        pdf.setDrawColor(180);
+        pdf.setLineWidth(0.1);
+        const t = 2; // tick length
+        pdf.line(x - t, y, x, y);            pdf.line(x, y - t, x, y);
+        pdf.line(x + CARD_W, y, x + CARD_W + t, y); pdf.line(x + CARD_W, y - t, x + CARD_W, y);
+        pdf.line(x - t, y + CARD_H, x, y + CARD_H); pdf.line(x, y + CARD_H, x, y + CARD_H + t);
+        pdf.line(x + CARD_W, y + CARD_H, x + CARD_W + t, y + CARD_H);
+        pdf.line(x + CARD_W, y + CARD_H, x + CARD_W, y + CARD_H + t);
+      }
+
+      if (opts.autoPrint) {
+        pdf.autoPrint();
+        const blobUrl = pdf.output('bloburl');
+        const w = window.open(blobUrl as unknown as string, '_blank');
+        if (!w) {
+          // Pop-up blocked → fall back to download
+          pdf.save(opts.filename || 'student-id-cards.pdf');
+          toast({ title: 'Pop-up blocked', description: 'Saved PDF instead — open it to print.' });
+        }
+      } else {
+        pdf.save(opts.filename || 'student-id-cards.pdf');
+      }
+
+      toast({
+        title: 'PDF Ready',
+        description: `${list.length} card(s) on ${Math.ceil(list.length / PER_PAGE)} A4 page(s)`,
+      });
+    } catch (e) {
+      console.error('PDF export error:', e);
+      toast({ title: 'Error', description: 'Failed to build PDF', variant: 'destructive' });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const exportPDF = (autoPrint: boolean) => {
+    const list = selectedIds.size > 0
+      ? students.filter(s => selectedIds.has(s.id))
+      : students;
+    return buildPDFFromStudents(list, {
+      autoPrint,
+      filename: `student-id-cards_${list.length}.pdf`,
+    });
+  };
+
   return (
     <Card className="border-border shadow-lg overflow-hidden">
       <CardHeader className="pb-4 border-b bg-gradient-to-r from-[#1e3a5f] to-[#0d2137]">
