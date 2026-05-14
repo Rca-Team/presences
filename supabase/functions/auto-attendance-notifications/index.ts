@@ -20,6 +20,131 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 }
 
+/**
+ * Read a settings row by key, returning string value or null.
+ */
+async function getSetting(client: any, key: string): Promise<string | null> {
+  const { data } = await client
+    .from('attendance_settings')
+    .select('value')
+    .eq('key', key)
+    .maybeSingle();
+  return data?.value ?? null;
+}
+
+function applyTemplate(tpl: string, vars: Record<string, string>): string {
+  return tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+}
+
+/**
+ * Send the same parent notification across every channel admin enabled
+ * (email / in-app / SMS). All channels are best-effort — one failing
+ * channel does not block the others.
+ */
+async function fanOutNotification(client: any, n: {
+  userId: string; studentName: string; parentName: string;
+  parentEmail: string | null; parentPhone: string | null;
+  class: string; section: string;
+  status: string; time: string; date: string; cutoff: string;
+  subject: string; body: string;
+}) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+  // Channel toggles
+  let channels = { email: true, inapp: true, sms: false };
+  const raw = await getSetting(client, 'notify_channels');
+  if (raw) { try { channels = { ...channels, ...JSON.parse(raw) }; } catch { /* ignore */ } }
+
+  // Admin-editable templates
+  const tplKey = n.status === 'present' ? 'msg_template_present'
+               : n.status === 'late'    ? 'msg_template_late'
+               : 'msg_template_absent';
+  const tpl = (await getSetting(client, tplKey)) || n.body;
+  const smsBody = applyTemplate(tpl, {
+    parent: n.parentName, student: n.studentName,
+    class: n.class, section: n.section,
+    time: n.time, date: n.date, cutoff: n.cutoff,
+  });
+
+  // 1) In-app notification
+  if (channels.inapp) {
+    try {
+      await client.from('notifications').insert({
+        user_id: n.userId,
+        title: n.subject,
+        message: smsBody,
+        type: `attendance_${n.status}`,
+        metadata: { status: n.status, date: n.date, time: n.time },
+      });
+    } catch (e) { console.error('inapp failed', e); }
+  }
+
+  // 2) Email via existing transactional email pipeline
+  if (channels.email && n.parentEmail) {
+    try {
+      await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({
+          to: n.parentEmail,
+          template: 'attendance-status-parent',
+          data: {
+            parentName: n.parentName,
+            studentName: n.studentName,
+            status: n.status,
+            time: n.time,
+            date: n.date,
+            class: n.class,
+            section: n.section,
+            subject: n.subject,
+            body: n.body,
+          },
+        }),
+      });
+    } catch (e) { console.error('email failed', e); }
+  }
+
+  // 3) SMS via Twilio (credentials stored in attendance_settings)
+  if (channels.sms && n.parentPhone) {
+    const sid   = await getSetting(client, 'twilio_account_sid');
+    const token = await getSetting(client, 'twilio_auth_token');
+    const from  = await getSetting(client, 'twilio_from_number');
+    if (sid && token && from) {
+      try {
+        const auth = btoa(`${sid}:${token}`);
+        const res = await fetch(
+          `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${auth}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ To: n.parentPhone, From: from, Body: smsBody }),
+          },
+        );
+        if (!res.ok) console.error('twilio failed', res.status, await res.text());
+      } catch (e) { console.error('sms failed', e); }
+    }
+  }
+
+  // Log every fan-out for the admin notifications panel
+  try {
+    await client.from('notification_log').insert({
+      user_id: n.userId,
+      channel: Object.entries(channels).filter(([,v]) => v).map(([k]) => k).join(','),
+      event_type: `attendance_${n.status}`,
+      payload: { subject: n.subject, body: smsBody },
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+    });
+  } catch (e) { console.error('log failed', e); }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
