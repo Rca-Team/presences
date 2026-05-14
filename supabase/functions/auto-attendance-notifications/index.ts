@@ -300,12 +300,13 @@ serve(async (req) => {
       if (emailBody) {
         const status = userAttendance?.status || 'absent';
         try {
+          const parentPhone = (profile as any).metadata?.parent_phone || profile.phone || null;
           await fanOutNotification(supabaseClient, {
             userId,
             studentName,
             parentName: profile.parent_name || 'Parent/Guardian',
             parentEmail: profile.parent_email,
-            parentPhone: (profile as any).parent_phone || null,
+            parentPhone,
             class: profile.class || '',
             section: profile.section || '',
             status,
