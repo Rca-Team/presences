@@ -234,7 +234,7 @@ serve(async (req) => {
     // Get all registered users (users who have profile data)
     let profilesQuery = supabaseClient
       .from('profiles')
-      .select('user_id, display_name, parent_email, parent_name, parent_phone, class, section, phone')
+      .select('user_id, display_name, parent_email, parent_name, class, section, phone, metadata')
       .not('parent_email', 'is', null);
     if (pilotEnabled && pilotClass && pilotSection) {
       profilesQuery = profilesQuery.eq('class', pilotClass).eq('section', pilotSection);
