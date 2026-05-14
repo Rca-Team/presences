@@ -8,6 +8,7 @@ import AttendanceCutoffSetting from '@/components/admin/AttendanceCutoffSetting'
 import FaceModelUpgradeSettings from '@/components/admin/FaceModelUpgradeSettings';
 import AutoNotificationScheduler from '@/components/admin/AutoNotificationScheduler';
 import PilotModeSettings from '@/components/admin/PilotModeSettings';
+import NotificationSettings from '@/components/admin/NotificationSettings';
 import BulkNotificationService from '@/components/admin/BulkNotificationService';
 import CategoryBasedView from '@/components/admin/CategoryBasedView';
 import PrincipalDashboard from '@/components/admin/PrincipalDashboard';
@@ -338,6 +339,7 @@ const Admin = () => {
           <div className="space-y-6">
             <AttendanceCutoffSetting />
             <PilotModeSettings />
+            <NotificationSettings />
             <FaceModelUpgradeSettings />
             <AutoNotificationScheduler />
           </div>);

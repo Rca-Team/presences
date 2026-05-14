@@ -50,6 +50,25 @@ const SCHOOL_ADDRESS = 'Vigyan Vihar, New Delhi – 110092 | Affiliated to CBSE'
 const SCHOOL_AFFILIATION = 'Under Kendriya Vidyalaya Sangathan, Min. of Education, Govt. of India';
 const ACADEMIC_YEAR = '2025–2026';
 
+/** Preload the KVS logo as a base64 data URL so html2canvas embeds it cleanly. */
+let cachedLogoDataUrl: string | null = null;
+const loadLogoDataUrl = async (): Promise<string> => {
+  if (cachedLogoDataUrl) return cachedLogoDataUrl;
+  try {
+    const res = await fetch(kvLogo);
+    const blob = await res.blob();
+    cachedLogoDataUrl = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onloadend = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+    return cachedLogoDataUrl!;
+  } catch {
+    return kvLogo;
+  }
+};
+
 const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ students: propStudents }) => {
   const { toast } = useToast();
   const [students, setStudents] = useState<StudentData[]>(propStudents || []);
@@ -140,7 +159,7 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
     else setSelectedIds(new Set(students.map(s => s.id)));
   };
 
-  const buildCardHTML = (student: StudentData, qrBase64: string) => {
+  const buildCardHTML = (student: StudentData, qrBase64: string, logoSrc: string) => {
     const classLabel = getCategoryLabel(student.category);
     
     return `
@@ -166,7 +185,7 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
             background: repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 8px);
           "></div>
           <div style="position: relative; z-index: 1; display: flex; align-items: center; gap: 10px;">
-            <img src="${kvLogo}" crossorigin="anonymous" style="width: 52px; height: 52px; flex-shrink: 0; background: #ffffff; border-radius: 50%; padding: 2px; object-fit: contain;" />
+            <img src="${logoSrc}" style="width: 56px; height: 56px; flex-shrink: 0; background: #ffffff; border-radius: 50%; padding: 4px; object-fit: contain; border: 2px solid #ffffff;" />
             <div style="flex: 1; text-align: left; min-width: 0;">
               <div style="font-size: 14px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; line-height: 1.1;">
                 ${SCHOOL_NAME}
@@ -334,10 +353,11 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
     document.body.removeChild(tempQRDiv);
 
     // Build card
+    const logoSrc = await loadLogoDataUrl();
     const container = document.createElement('div');
     container.style.position = 'absolute';
     container.style.left = '-9999px';
-    container.innerHTML = buildCardHTML(student, qrBase64);
+    container.innerHTML = buildCardHTML(student, qrBase64, logoSrc);
     document.body.appendChild(container);
 
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -655,7 +675,7 @@ const StudentIDCardGenerator: React.FC<StudentIDCardGeneratorProps> = ({ student
                       background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 8px)'
                     }} />
                     <div className="relative z-10 flex items-center gap-2.5">
-                      <img src={kvLogo} alt="KV Logo" loading="lazy" width={52} height={52} className="w-12 h-12 flex-shrink-0 bg-white rounded-full p-0.5 object-contain" />
+                      <img src={kvLogo} alt="Kendriya Vidyalaya Sangathan logo" loading="lazy" width={56} height={56} className="w-14 h-14 flex-shrink-0 bg-white rounded-full p-1 object-contain border-2 border-white shadow" />
                       <div className="flex-1 min-w-0 text-left">
                         <p className="text-white font-extrabold text-[13px] sm:text-sm leading-tight">{SCHOOL_NAME}</p>
                         <p className="text-amber-400 font-bold text-[11px] leading-tight">{SCHOOL_SUBNAME}</p>

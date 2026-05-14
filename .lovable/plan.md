@@ -1,114 +1,105 @@
-## 1. System Analysis (what already exists)
 
-**Auth & Roles**
-- Supabase auth with `user_roles` table (admin / principal / teacher / user) + `has_role()` security-definer function
-- Protected routes via `ProtectedRoute` wrapper
-- Parent portal (public lookup), parent email/phone on profiles
+# Plan — Production-ready school deployment
 
-**Identity & Face Pipeline**
-- `face-api.js` (TinyFaceDetector, SSD MobileNetV1, FaceLandmark68, FaceRecognition) loaded from `/public/models`
-- Registration paths: `Register.tsx`, `MultiAngleCapture`, `AutoCapture10`, `Scan3DCapture`, `ClassPhotoRegistration`, `BulkImageRegistration`, `PDFBulkRegistration`, ID-card OCR extractors
-- Storage: `face_descriptors` table (jsonb descriptor + image_url + quality_score) and storage buckets `student-registration-faces`, `attendance-training-faces`, public `face-images`
-- Progressive training service samples per user; 3D-equivalent point cloud + descriptor cloud artifacts
-- Recognition: `RecognitionService` (single), `MultipleFaceService` (classroom), `TurboRecognitionService` (GPU + worker pool + IndexedDB k-d tree cache), strict 99% fused 3D matcher with manual-review fallback
+This is a focused, atomic rollout. Everything ships behind a `pilotMode` class filter so you can roll out to one class first.
 
-**Attendance Capture Surfaces**
-- `Attendance.tsx` with `FuturisticFaceScanner`, `MultipleFaceAttendanceCapture`, `MobileAttendanceCapture`, QR fallback (`QRCodeScanner`)
-- `GateMode` (entry/exit with `gate_sessions` + `gate_entries`), late-entry form, stranger alert
-- Attendance cutoff time → present/late logic, `attendance_records` table
+## 1. Roles & route guards
 
-**Admin / Teacher Tooling**
-- `Admin.tsx` aggregates: `TeacherDashboard`, `PrincipalDashboard`, `AttendanceCalendar`, `StudentDetailsTable`, `ClassSectionReport`, `AttendanceExport`, `AttendanceReportGenerator`, `ClassTeacherManager`, `TeacherPermissionsManager`, `TimetableManager`, `StudentCSVImporter`, `BulkImageRegistration`, `StudentFaceSamplesManager`, `FaceModelUpgradeSettings`
+- `user_roles` already exists with `app_role` enum. Add `'teacher'` and `'parent'` to the enum if missing (admin already there).
+- New hook `useUserRole()` already exists — extend with `isTeacher`, `isParent`, plus assigned `class`/`section` lookup from `class_teachers`.
+- Add `<RoleRoute roles={['teacher','admin']}>` wrapper used by new teacher pages.
+- Admin → Users tab gets a "Promote to Teacher" action that writes `user_roles` + `class_teachers` row.
 
-**Notifications**
-- Push (service worker), realtime listener, transactional emails (status to parent, absent-cutoff), SMS, WhatsApp connectors
-- Edge functions: `auto-attendance-notifications`, `auto-parent-notification`, `absence-cutoff-notify`, `absence-tracker`, `send-transactional-email`, `process-email-queue`, `stranger-alert`
+## 2. Teacher portal (3 pages)
 
-**Extras (likely deferred for pilot)**
-- AI insights, predictions, gamification, wellness, emotion analytics, zone tracker, bus tracker, visitor management, panic button, lockdown
+```text
+/teacher              → Dashboard: today's attendance for assigned class, quick actions
+/teacher/attendance   → AttendanceCapture pre-scoped to teacher's class/section
+/teacher/gate         → Gate-mode scanner (re-uses GateModeScanner)
+/teacher/timetable    → Read-only timetable + substitutions for their class (from period_timings + substitutions)
+```
 
-**Algorithms in use**
-- SSD MobileNetV1 detection (minConfidence 0.4) + 128-d FaceNet descriptor
-- Cosine/Euclidean matching + k-d tree (IndexedDB cache) + parallel web-worker pool
-- Strict fused 3D score = 0.7·descriptor-cloud similarity + 0.3·point-cloud distance, threshold 0.99 → auto, else manual review
-- Cutoff-time rule → present/late/absent classification
+All 4 routes guarded by `RoleRoute={['teacher','admin']}`. Class/section is locked from the teacher's `class_teachers` record — they cannot pick another class.
 
-## 2. Pilot Plan — One Class, Real-Time
+## 3. Real-time notifications (cron + on-attendance)
 
-Goal: deploy in **one class (e.g. Class 8 - Section A, ~30-40 students)** for 4 weeks, validate recognition accuracy and parent-notification loop, then expand.
+### On-attendance trigger (instant)
+Existing `auto-attendance-notifications` edge function is already wired to fire on insert. Patch it to:
+- Read cutoff from `attendance_settings.key='cutoff_time'`
+- Mark `present` if before cutoff, `late` if after
+- Send Email (already works) + In-app notification (insert into `notifications`) + SMS (if Twilio configured in settings)
 
-### Week 0 — Setup (2-3 days)
-1. **Class scoping**
-   - Create class+section in `class_teachers`, assign one teacher account
-   - Use `TeacherPermissionsManager` to restrict teacher to that class only
-   - Seed period timings via `TimetableManager`
-2. **Hardware**
-   - 1 classroom tablet/laptop (front camera ≥720p, Chrome) mounted at door
-   - 1 backup phone (PWA install) for teacher
-   - Stable Wi-Fi; UPS for the tablet
-3. **Cutoff time** configured in `AttendanceCutoffSetting` (e.g. 08:30)
+### Cron — daily absence sweep
+Create TanStack server route `src/routes/api/public/hooks/absence-sweep.ts` that:
+- Runs every 5 min after cutoff
+- Finds students in pilot class with no attendance today
+- Marks absent → fires same notification fan-out
 
-### Week 1 — Enrollment
-1. Bulk import roster via `StudentCSVImporter` (name, roll, parent email/phone)
-2. Face enrollment per student using `MultiAngleCapture` + `Scan3DCapture` (≥10 samples, multiple angles/lighting)
-3. Validate each student through `/​__admin/face-model-validator` (descriptor cloud + 3D point cloud sanity)
-4. Print/share student ID cards (`StudentIDCardGenerator`) as QR fallback
-5. Parent onboarding: send welcome email + parent-portal link
+Schedule via `pg_cron` calling that route.
 
-### Week 2 — Shadow Mode (no parent alerts)
-1. Run `MultipleFaceAttendanceCapture` at start of first period each morning
-2. Teacher reviews **manual-confirmation queue** for sub-99% matches
-3. Disable parent notifications; collect:
-   - True positives / false positives / misses per day
-   - Average confidence, fused 3D score distribution
-   - Latency per scan (target <2s/face on device)
-4. Daily export via `AttendanceExport` for offline audit against paper register
-5. Tune: minimum face size, cutoff time, lighting placement, threshold (only if data justifies)
+### Notification fan-out helper (one place)
+New edge function `notify-parent` invoked by both the trigger and the cron, accepts `{userId, status, channels}`, dispatches to the channels enabled in `attendance_settings`.
 
-### Week 3 — Live with Notifications
-1. Enable `auto-attendance-notifications` + `absence-cutoff-notify` for the single class only (filter by class/section in scheduler)
-2. Parent channels: email primary, WhatsApp/SMS optional per parent preference
-3. Late-entry workflow via `LateEntryForm` (gate mode) for after-cutoff arrivals
-4. Stranger alert ON; teacher confirms before escalation
+## 4. Admin Settings panel (new tab "Notifications & Cutoff")
 
-### Week 4 — Full Loop
-1. Add Gate Mode at classroom door for exit tracking (optional)
-2. Weekly report to parents via `AttendanceReportGenerator`
-3. Principal dashboard reviewed weekly with class teacher
-4. Decision gate: scale to next class only if
-   - Recognition accuracy ≥98% over 5 consecutive days
-   - <1% false-positive rate
-   - Parent-notification delivery ≥95%
-   - Zero unresolved security findings
+Stored in `attendance_settings` (key/value rows):
+- `cutoff_time` — time picker (default 09:15)
+- `pilot_classes` — multi-select of classes to enable (e.g. `["6-A"]`)
+- `notify_channels` — checkboxes Email / In-app / SMS
+- `twilio_account_sid`, `twilio_auth_token`, `twilio_from_number` — text inputs (token stored in Supabase as plain settings row — admin-only RLS already protects it; flagged with a "store in secrets for production" notice)
+- `notification_templates` — editable text for present / late / absent
 
-### Daily Operating Procedure (teacher)
-1. Open `/attendance` → start class session (filter to own class)
-2. Scan students at door for 10 min before cutoff
-3. Resolve manual-review queue
-4. Mark any unscanned as absent at cutoff (auto by `absence-tracker`)
-5. End-of-day: glance at `TeacherDashboard` summary
+Settings cached client-side; edge functions read fresh per call.
 
-## 3. Features Deferred Until After Pilot
-Bus tracking, zone tracker, visitor management, panic button, emergency lockdown, gamification, wellness, emotion analytics, AI predictions — keep code present but hidden from teacher nav for the pilot class to reduce surface area.
+## 5. ID card logo fix
 
-## 4. Risks & Mitigations
-- **Lighting / camera angle** → fixed mount + ring light; re-enroll low-quality samples flagged by `FaceSamplesDiagnosticsPanel`
-- **Twins / siblings** → keep manual-review threshold strict; teacher confirms
-- **Privacy / consent** → printed consent form for parents before Week 1; storage buckets remain private; only `face-images` bucket is public (audit usage)
-- **Network outage** → IndexedDB descriptor cache + queued attendance writes (already in turbo pipeline); QR fallback as backup
-- **Wrong-class drift** → teacher account scoped via `TeacherPermissionsManager`; RLS already enforces owner/admin
+`src/assets/kv-logo.png` is already replaced. Issue: `html2canvas` crops the round image because the parent `<img>` inside the dark header has a white circle background but the imported file has a checkerboard transparent border. Fix in `StudentIDCardGenerator.tsx`:
+- Embed logo as base64 once (via `new Image() → canvas → toDataURL`) and inline into the HTML string so html2canvas never has to fetch it.
+- Set `width:56;height:56;object-fit:contain;background:#fff;border-radius:50%;padding:4px`.
+- Same fix in the live preview block.
 
-## 5. Technical Changes Needed for Pilot (small)
-- Add a class/section filter to notification edge functions (currently global) so only pilot class triggers parent emails
-- Add a "Pilot mode" toggle in `attendance_settings` that limits auto-notifications to a configured class+section
-- Add a daily metrics view (accuracy %, false-positive count, avg fused score) to `TeacherDashboard` for the pilot class
-- Optional: log per-scan metrics to a new `recognition_metrics` table for post-pilot analysis
+## 6. Practical "better than manual" extras (low-cost, high-value)
 
-No new third-party services required — Lovable Cloud + existing edge functions cover the pilot.
+- **One-tap "Mark whole class absent except scanned"** button after gate-mode session ends — slashes admin work.
+- **Daily attendance digest email** to class teacher at end of day (uses existing email infra, new template).
+- **Parent reply tracking** — when a parent replies to absent email with a reason, store it in `late_entries.reason` via the existing inbound `receive-email` function.
+- **QR-code attendance fallback** — student ID-card QR can be scanned in `AttendanceCapture` when face recognition fails (camera lighting, mask, etc.).
+- **Sick / leave pre-application** in Parent Portal — creates an `attendance_records` row with `status='excused'` so the cron does not mark absent.
 
-## 6. Success Metrics (end of Week 4)
-- ≥98% recognition accuracy
-- ≤2s average scan latency per student
-- ≥95% parent-notification delivery
-- ≥80% teacher satisfaction (single-question survey)
-- 0 P1 incidents (wrong attendance marked, wrong parent notified)
+## 7. Files touched
+
+```text
+NEW   src/routes/api/public/hooks/absence-sweep.ts
+NEW   src/pages/TeacherDashboard.tsx
+NEW   src/pages/TeacherAttendance.tsx
+NEW   src/pages/TeacherGate.tsx
+NEW   src/pages/TeacherTimetable.tsx
+NEW   src/components/RoleRoute.tsx
+NEW   src/components/admin/NotificationSettings.tsx
+NEW   supabase/functions/notify-parent/index.ts
+EDIT  supabase/functions/auto-attendance-notifications/index.ts
+EDIT  supabase/functions/absence-cutoff-notify/index.ts (delegate to notify-parent)
+EDIT  src/components/admin/StudentIDCardGenerator.tsx  (logo fix)
+EDIT  src/components/features/StudentIDCard.tsx       (logo fix)
+EDIT  src/hooks/useUserRole.ts
+EDIT  src/App.tsx                                     (new routes)
+EDIT  src/pages/Admin.tsx                             (new settings tab)
+SQL   migration: add 'teacher','parent' to app_role; ensure attendance_settings rows; pg_cron schedule
+```
+
+## 8. Rollout order (so you see results fast)
+
+1. ID-card logo fix (visible in 30 sec)
+2. Migration + admin Notification Settings UI
+3. Teacher role + 4 teacher pages
+4. Patch on-attendance edge function (instant present/late)
+5. New `notify-parent` fan-out + absence-sweep cron
+6. Practical extras (digest, QR fallback, leave pre-application)
+
+## Notes
+
+- Twilio key is **not** requested now — captured in admin settings as you asked. For real production we should still move it to Supabase secrets; a banner in the settings panel makes that recommendation.
+- All pilot-mode logic gates on `pilot_classes` setting — the class 6-A you start with is the only one notifications fire for, so other classes can run silently until you scale up.
+- Existing edge functions already deployed — no new secrets required for email/in-app.
+
+Reply **approve** to start; I'll execute step 1 (logo) immediately and the rest in order.
