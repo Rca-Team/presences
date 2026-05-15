@@ -116,7 +116,7 @@ const RealtimeNotificationListener: React.FC = () => {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
         const n = payload.new as any;
         if (n.type !== 'push_subscription') {
-          notify(`🔔 ${n.title}`, n.message || '', '🔔', `notif-${n.id}`, '/dashboard');
+          notify(`🔔 ${n.title}`, n.message || '', '🔔', `notif-${n.id}`, '/admin');
         }
       })
       .subscribe();
