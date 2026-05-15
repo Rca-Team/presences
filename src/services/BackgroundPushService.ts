@@ -112,7 +112,7 @@ class BackgroundPushService {
       body: `${studentName} ${statusText} in ${category}`,
       targetUserIds: [userId],
       data: {
-        url: '/dashboard',
+        url: '/admin',
         studentName,
         status,
         category,

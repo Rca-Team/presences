@@ -214,11 +214,11 @@ const GateMode = () => {
         unknown_entries: unknown
       }).eq('id', sessionId);
     }
-    navigate('/dashboard');
+    navigate('/admin');
   }, [sessionId, entries, navigate]);
 
   if (isSetup) {
-    return <GateModeSetup onStart={startSession} onCancel={() => navigate('/dashboard')} />;
+    return <GateModeSetup onStart={startSession} onCancel={() => navigate('/admin')} />;
   }
 
   const recognizedCount = entries.filter(e => e.isRecognized).length;
