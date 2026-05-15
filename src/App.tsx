@@ -21,6 +21,7 @@ import ParentPortal from './pages/ParentPortal';
 import Unsubscribe from './pages/Unsubscribe';
 import DataBackup from './pages/DataBackup';
 import FaceModelValidator from './pages/FaceModelValidator';
+import TeacherPortal from './pages/TeacherPortal';
 
 import SplashAnimation from "./components/SplashAnimation";
 import { AttendanceProvider } from './contexts/AttendanceContext';
@@ -73,7 +74,7 @@ function AnimatedRoutes() {
         } />
         <Route path="/teacher" element={
           <ProtectedRoute requireRoles={["admin", "principal", "teacher"]}>
-            <Admin />
+            <TeacherPortal />
           </ProtectedRoute>
         } />
         <Route path="/notifications" element={
