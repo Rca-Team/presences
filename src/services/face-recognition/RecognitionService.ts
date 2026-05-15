@@ -506,12 +506,12 @@ export async function recordAttendance(
     if (userId && userId !== 'unknown') {
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('username')
-        .eq('id', userId)
-        .single();
-        
-      if (profileData?.username) {
-        userName = profileData.username;
+        .select('display_name, username, full_name')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (profileData) {
+        userName = profileData.display_name || profileData.full_name || profileData.username || null;
       }
     }
     
@@ -557,6 +557,7 @@ export async function recordAttendance(
       type: 'webcam',
       timestamp,
       confidence,
+      gate: captureMode === 'gate-mode',
       ...deviceInfo,
       metadata: {
         ...deviceInfo?.metadata,
