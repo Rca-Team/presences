@@ -557,8 +557,8 @@ export async function recordAttendance(
       type: 'webcam',
       timestamp,
       confidence,
-      gate: captureMode === 'gate-mode',
       ...deviceInfo,
+      gate: captureMode === 'gate-mode' || Boolean((deviceInfo as any)?.gate),
       metadata: {
         ...deviceInfo?.metadata,
         name: userName || deviceInfo?.metadata?.name || 'Unknown',
