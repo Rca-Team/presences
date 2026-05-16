@@ -213,7 +213,7 @@ function AnimatedRoutes() {
 }
 
 function App() {
-  const [showSplash] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
 
   return (
     <ThemeProvider defaultTheme="dark">
