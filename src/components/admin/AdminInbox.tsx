@@ -7,7 +7,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Mail, RefreshCw, Search, Inbox, AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface EmailLogItem {
   id: string;
@@ -33,9 +35,13 @@ const StatusIcon = ({ status }: { status: string }) => {
 };
 
 const AdminInbox: React.FC = () => {
+  const { toast } = useToast();
   const [logs, setLogs] = useState<EmailLogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [templateFilter, setTemplateFilter] = useState<string>('all');
+  const [recipientFilter, setRecipientFilter] = useState('');
+  const [retryingIds, setRetryingIds] = useState<Record<string, boolean>>({});
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -68,16 +74,46 @@ const AdminInbox: React.FC = () => {
   }, [logs]);
 
   const filtered = dedupedLogs.filter((e) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      e.template_name.toLowerCase().includes(q) ||
-      e.recipient_email.toLowerCase().includes(q) ||
-      e.status.toLowerCase().includes(q)
-    );
+    if (statusFilter !== 'all' && e.status !== statusFilter) return false;
+    if (templateFilter !== 'all' && e.template_name !== templateFilter) return false;
+    if (recipientFilter && !e.recipient_email.toLowerCase().includes(recipientFilter.toLowerCase())) return false;
+    return true;
   });
 
   const liveCount = dedupedLogs.filter((e) => e.status === 'pending').length;
+  const templateOptions = useMemo(
+    () => Array.from(new Set(dedupedLogs.map((e) => e.template_name))).sort((a, b) => a.localeCompare(b)),
+    [dedupedLogs]
+  );
+
+  const retryableStatuses = new Set(['failed', 'dlq']);
+
+  const handleRetry = async (messageId: string | null) => {
+    if (!messageId) return;
+    setRetryingIds((prev) => ({ ...prev, [messageId]: true }));
+    try {
+      const { error } = await supabase.functions.invoke('admin-email-inbox', {
+        body: { action: 'retry', messageId },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Retry queued',
+        description: 'The email has been added back to the send queue.',
+      });
+
+      await fetchLogs();
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Retry failed',
+        description: err?.message || 'Unable to retry this email.',
+      });
+    } finally {
+      setRetryingIds((prev) => ({ ...prev, [messageId]: false }));
+    }
+  };
 
   if (loading) {
     return (
@@ -100,13 +136,50 @@ const AdminInbox: React.FC = () => {
         </Button>
       </div>
 
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger>
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="failed">Failed</SelectItem>
+            <SelectItem value="dlq">DLQ</SelectItem>
+            <SelectItem value="suppressed">Suppressed</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={templateFilter} onValueChange={setTemplateFilter}>
+          <SelectTrigger>
+            <SelectValue placeholder="Template" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All templates</SelectItem>
+            {templateOptions.map((template) => (
+              <SelectItem key={template} value={template}>{template}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter recipient..."
+            value={recipientFilter}
+            onChange={(e) => setRecipientFilter(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search recipient/template/status..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
+          placeholder="Quick search in currently filtered emails..."
+          value={recipientFilter}
+          onChange={(e) => setRecipientFilter(e.target.value)}
+          className="hidden"
         />
       </div>
 
@@ -139,6 +212,18 @@ const AdminInbox: React.FC = () => {
                   <Badge variant={statusVariant(email.status)} className="text-[10px]">
                     {email.status}
                   </Badge>
+                  {email.message_id && retryableStatuses.has(email.status) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 px-2 text-[10px]"
+                      disabled={Boolean(retryingIds[email.message_id])}
+                      onClick={() => handleRetry(email.message_id)}
+                    >
+                      {retryingIds[email.message_id] ? 'Retrying...' : 'Retry'}
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
