@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,19 +15,29 @@ import { motion } from 'framer-motion';
 
 const Signup = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const queryRedirect = new URLSearchParams(location.search).get('redirectTo');
+  const storedRedirect = sessionStorage.getItem('auth_redirect_to');
+  const from = queryRedirect || (location.state as { from?: string } | null)?.from || storedRedirect || '/attendance';
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) navigate('/attendance');
+      if (session) {
+        sessionStorage.removeItem('auth_redirect_to');
+        navigate(from, { replace: true });
+      }
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate('/attendance');
+      if (session) {
+        sessionStorage.removeItem('auth_redirect_to');
+        navigate(from, { replace: true });
+      }
     });
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, from]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -49,11 +59,14 @@ const Signup = () => {
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        options: { emailRedirectTo: `${window.location.origin}/`, data: { name: formData.name } }
+        options: {
+          emailRedirectTo: `${window.location.origin}/login?redirectTo=${encodeURIComponent(from)}`,
+          data: { name: formData.name }
+        }
       });
       if (error) throw error;
       toast({ title: "Account created!", description: "Check your email to verify your account" });
-      navigate('/login');
+      navigate(`/login?redirectTo=${encodeURIComponent(from)}`, { replace: true });
     } catch (error: any) {
       toast({ title: "Signup failed", description: error.message || "Failed to create account", variant: "destructive" });
     } finally {
@@ -63,8 +76,9 @@ const Signup = () => {
 
   const handleGoogleSignUp = async () => {
     try {
+      sessionStorage.setItem('auth_redirect_to', from);
       const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/signup?redirectTo=${encodeURIComponent(from)}`,
       });
       if (result?.error) throw result.error;
     } catch (error: any) {
@@ -130,7 +144,7 @@ const Signup = () => {
           <div className="text-center lg:text-left space-y-1">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Create account</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Get started with Presence Smart School
+              Get started with Presences smart automation
             </p>
           </div>
 
