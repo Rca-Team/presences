@@ -202,7 +202,6 @@ const Login = () => {
           {/* Bottom link */}
           <p className="text-center text-sm text-muted-foreground pb-safe">
             New to Presences smart automation?{' '}
-            <Link to="/signup" className="text-primary font-medium hover:underline">
             <Link to={`/signup?redirectTo=${encodeURIComponent(from)}`} className="text-primary font-medium hover:underline">
               Create account
             </Link>
