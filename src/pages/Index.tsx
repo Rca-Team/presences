@@ -155,6 +155,22 @@ const Index = () => {
                   </Link>
                 </motion.div>
 
+                <motion.div variants={itemVariants} className="mx-3 sm:mx-0 rounded-2xl border border-border/60 bg-card/70 backdrop-blur-xl p-3 sm:p-4 max-w-xl lg:max-w-none">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-xl border border-border/60 bg-muted/40 flex items-center justify-center font-bold text-sm text-foreground">
+                      RCA
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Creator Team</p>
+                      <p className="text-xs text-muted-foreground">RCA Team logo placeholder (you can provide the logo later)</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid gap-1.5 text-xs sm:text-sm text-muted-foreground">
+                    <p><span className="font-semibold text-foreground">Gaurav</span> — Team leader + Developer</p>
+                    <p><span className="font-semibold text-foreground">Jatin</span> — Contributor</p>
+                  </div>
+                </motion.div>
+
                 <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-5 pt-1 sm:pt-4 px-2 sm:px-0">
                   {["AI Powered", "Real-time", "Parent Portal", "Secure"].map((badge, i) => (
                     <div key={i} className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
