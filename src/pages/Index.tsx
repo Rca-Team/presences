@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import rcaTeamLogo from '@/assets/rca-team-logo.jpg';
+import gauravPhoto from '@/assets/gaurav-photo.png';
 
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -157,16 +159,27 @@ const Index = () => {
 
                 <motion.div variants={itemVariants} className="mx-3 sm:mx-0 rounded-2xl border border-border/60 bg-card/70 backdrop-blur-xl p-3 sm:p-4 max-w-xl lg:max-w-none">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-xl border border-border/60 bg-muted/40 flex items-center justify-center font-bold text-sm text-foreground">
-                      RCA
-                    </div>
+                    <img
+                      src={rcaTeamLogo}
+                      alt="RCA Team logo"
+                      className="h-12 w-12 rounded-xl border border-border/60 object-cover"
+                      loading="lazy"
+                    />
                     <div>
                       <p className="text-sm font-semibold">Creator Team</p>
-                      <p className="text-xs text-muted-foreground">RCA Team logo placeholder (you can provide the logo later)</p>
+                      <p className="text-xs text-muted-foreground">RCA Team</p>
                     </div>
                   </div>
-                  <div className="mt-3 grid gap-1.5 text-xs sm:text-sm text-muted-foreground">
-                    <p><span className="font-semibold text-foreground">Gaurav</span> — Team leader + Developer</p>
+                  <div className="mt-3 flex items-center gap-3 rounded-xl border border-border/50 bg-background/40 p-2.5">
+                    <img
+                      src={gauravPhoto}
+                      alt="Gaurav"
+                      className="h-12 w-12 rounded-lg object-cover"
+                      loading="lazy"
+                    />
+                    <p className="text-xs sm:text-sm text-muted-foreground"><span className="font-semibold text-foreground">Gaurav</span> — Team leader + Developer</p>
+                  </div>
+                  <div className="mt-2 grid gap-1.5 text-xs sm:text-sm text-muted-foreground">
                     <p><span className="font-semibold text-foreground">Jatin</span> — Contributor</p>
                   </div>
                 </motion.div>
