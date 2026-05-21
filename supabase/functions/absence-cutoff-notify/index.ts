@@ -15,6 +15,10 @@ serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
+    if (!supabaseUrl || !serviceKey) {
+      throw new Error('Missing backend environment configuration for absence notifications');
+    }
+
     // Verify caller is admin
     const authHeader = req.headers.get('Authorization');
     if (authHeader) {
@@ -83,6 +87,7 @@ serve(async (req) => {
       .from('attendance_records')
       .select('user_id, status')
       .in('user_id', userIds)
+      .in('status', ['present', 'late'])
       .gte('timestamp', `${today}T00:00:00`)
       .lte('timestamp', `${today}T23:59:59`);
 
@@ -109,13 +114,17 @@ serve(async (req) => {
       const parentEmail = profile.parent_email;
 
       if (profile.user_id) {
-        await supabase.from('notifications').insert({
-          user_id: profile.user_id,
-          title: '❌ Marked Absent',
-          message: `You were marked absent on ${dateStr} after cutoff time (${cutoffDisplay}).`,
-          type: 'attendance',
-        });
-        inAppSent++;
+        try {
+          await supabase.from('notifications').insert({
+            user_id: profile.user_id,
+            title: '❌ Marked Absent',
+            message: `You were marked absent on ${dateStr} after cutoff time (${cutoffDisplay}).`,
+            type: 'attendance',
+          });
+          inAppSent++;
+        } catch (e: any) {
+          errors.push(`In-app notification for ${studentName}: ${e.message}`);
+        }
       }
 
       if (!parentEmail) continue;
