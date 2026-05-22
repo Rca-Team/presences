@@ -352,7 +352,7 @@ const FuturisticFaceScanner: React.FC<FuturisticFaceScannerProps> = ({ onScanCom
             const status = isPastCutoff ? 'late' : 'present';
             const strictMetrics = result.strictMetrics;
             const strictScore = strictMetrics?.fusedScore ?? (result.confidence ?? 0);
-            const thresholdTarget = strictMetrics?.thresholdTarget ?? 0.99;
+            const thresholdTarget = strictMetrics?.thresholdTarget ?? 0.5;
             const autoMarkEligible = !!strictMetrics?.autoMarkEligible;
             
             if (autoMarkEligible) {
@@ -485,7 +485,7 @@ const FuturisticFaceScanner: React.FC<FuturisticFaceScannerProps> = ({ onScanCom
       } else if (reviewCount > 0) {
         toast({
           title: 'Manual Confirmation Required',
-          description: `${reviewCount} candidate${reviewCount > 1 ? 's' : ''} is below strict 99% threshold.`,
+          description: `${reviewCount} candidate${reviewCount > 1 ? 's' : ''} is below strict 50% threshold.`,
         });
       } else {
         toast({
