@@ -14,6 +14,7 @@ interface GateModeScannerProps {
   onFaceDetected: (entry: GateEntry) => void;
   isActive: boolean;
   onPendingCountChange?: (count: number) => void;
+  periodKey?: string;
 }
 
 interface LiveConfidence {
@@ -31,7 +32,7 @@ interface DetectionBox {
   h: number; // 0..1
 }
 
-const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange }: GateModeScannerProps) => {
+const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange, periodKey }: GateModeScannerProps) => {
   const REDETECTION_COOLDOWN_MS = 5000;
   const DUPLICATE_COOLDOWN_MS = 30000;
   const MIN_RECOGNITION_CONFIDENCE = 0.6;
@@ -70,10 +71,9 @@ const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange }: Gat
   }, [onPendingCountChange]);
 
   const getCurrentPeriodKey = useCallback(() => {
-    const now = new Date();
-    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    return `period-${now.toISOString().slice(0, 10)}-${hhmm}`;
-  }, []);
+    if (periodKey) return periodKey;
+    return `period-${new Date().toISOString().slice(0, 10)}-default`;
+  }, [periodKey]);
 
   // Load saved detection box for the active gate (uses first active gate row)
   useEffect(() => {
