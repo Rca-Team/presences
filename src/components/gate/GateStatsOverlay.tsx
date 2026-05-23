@@ -7,11 +7,23 @@ interface GateStatsOverlayProps {
   totalEntries: number;
   totalStudents: number;
   uniqueStudents: number;
+  totalPresentToday: number;
+  lateCount: number;
+  pendingCount: number;
   unknownCount: number;
   recentEntries: GateEntry[];
 }
 
-const GateStatsOverlay = ({ totalEntries, totalStudents, uniqueStudents, unknownCount, recentEntries }: GateStatsOverlayProps) => {
+const GateStatsOverlay = ({
+  totalEntries,
+  totalStudents,
+  uniqueStudents,
+  totalPresentToday,
+  lateCount,
+  pendingCount,
+  unknownCount,
+  recentEntries,
+}: GateStatsOverlayProps) => {
   return (
     <div className="h-full flex flex-col bg-card/50 backdrop-blur">
       {/* Big counter */}
@@ -27,13 +39,23 @@ const GateStatsOverlay = ({ totalEntries, totalStudents, uniqueStudents, unknown
       <div className="grid grid-cols-2 gap-px bg-border">
         <div className="bg-card p-3 text-center">
           <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto mb-1" />
+          <div className="text-xl font-bold text-foreground">{totalPresentToday}</div>
+          <div className="text-xs text-muted-foreground">Present Today</div>
+        </div>
+        <div className="bg-card p-3 text-center">
+          <Clock className="h-5 w-5 text-yellow-500 mx-auto mb-1" />
+          <div className="text-xl font-bold text-foreground">{lateCount}</div>
+          <div className="text-xs text-muted-foreground">Late</div>
+        </div>
+        <div className="bg-card p-3 text-center">
+          <UserCheck className="h-5 w-5 text-primary mx-auto mb-1" />
           <div className="text-xl font-bold text-foreground">{totalEntries}</div>
-          <div className="text-xs text-muted-foreground">Recognized</div>
+          <div className="text-xs text-muted-foreground">Session Marks</div>
         </div>
         <div className="bg-card p-3 text-center">
           <AlertTriangle className="h-5 w-5 text-destructive mx-auto mb-1" />
-          <div className="text-xl font-bold text-foreground">{unknownCount}</div>
-          <div className="text-xs text-muted-foreground">Unknown</div>
+          <div className="text-xl font-bold text-foreground">{pendingCount + unknownCount}</div>
+          <div className="text-xs text-muted-foreground">Pending / Unknown</div>
         </div>
       </div>
 
