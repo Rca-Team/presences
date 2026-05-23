@@ -354,9 +354,8 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ 
-        error: (error as Error).message,
-        timestamp: new Date().toISOString(),
-        details: (error as Error).stack
+        error: 'Internal server error',
+        timestamp: new Date().toISOString()
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
