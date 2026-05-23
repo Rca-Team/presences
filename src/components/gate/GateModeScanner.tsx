@@ -13,6 +13,7 @@ import DetectionBoxEditor from './DetectionBoxEditor';
 interface GateModeScannerProps {
   onFaceDetected: (entry: GateEntry) => void;
   isActive: boolean;
+  onPendingCountChange?: (count: number) => void;
 }
 
 interface LiveConfidence {
@@ -30,10 +31,12 @@ interface DetectionBox {
   h: number; // 0..1
 }
 
-const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => {
+const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange }: GateModeScannerProps) => {
   const REDETECTION_COOLDOWN_MS = 5000;
+  const DUPLICATE_COOLDOWN_MS = 30000;
   const MIN_RECOGNITION_CONFIDENCE = 0.6;
-  const MIN_ATTENDANCE_MARK_CONFIDENCE = 0.65;
+  const MIN_ATTENDANCE_MARK_CONFIDENCE = 0.5;
+  const BORDERLINE_RETRY_CONFIDENCE = 0.45;
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -53,9 +56,18 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
   const attendanceMarkedRef = useRef<Set<string>>(new Set());
   const alreadyMarkedTodayRef = useRef<Set<string>>(new Set());
   const recognizedCooldownRef = useRef<Map<string, number>>(new Map());
+  const periodMarkedRef = useRef<Set<string>>(new Set());
+  const borderlineRetryRef = useRef<Map<string, number>>(new Map());
+  const [autoZone, setAutoZone] = useState<DetectionBox | null>(null);
   // Store per-face labels for canvas overlay
   const faceLabelsRef = useRef<Map<string, { name: string; confidence: number; recognized: boolean }>>(new Map());
   const { isEnhancing: isAIEnhancing, autoEnhance } = usePhotoEnhancer();
+
+  const getCurrentPeriodKey = useCallback(() => {
+    const now = new Date();
+    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return `period-${now.toISOString().slice(0, 10)}-${hhmm}`;
+  }, []);
 
   // Load saved detection box for the active gate (uses first active gate row)
   useEffect(() => {
@@ -78,6 +90,55 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!videoRef.current) return;
+    const computeAutoZone = () => {
+      const w = videoRef.current?.videoWidth || 1280;
+      const h = videoRef.current?.videoHeight || 720;
+      const isPortraitish = h > w;
+      setAutoZone(
+        isPortraitish
+          ? { x: 0.23, y: 0.18, w: 0.54, h: 0.62 }
+          : { x: 0.31, y: 0.14, w: 0.38, h: 0.68 }
+      );
+    };
+    computeAutoZone();
+    window.addEventListener('resize', computeAutoZone);
+    return () => window.removeEventListener('resize', computeAutoZone);
+  }, [isLoading, facingMode]);
+
+  useEffect(() => {
+    const activePeriod = getCurrentPeriodKey();
+    (async () => {
+      try {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 1);
+
+        const { data } = await supabase
+          .from('attendance_records')
+          .select('user_id, metadata')
+          .eq('source', 'gate-mode')
+          .in('status', ['present', 'late'])
+          .gte('timestamp', start.toISOString())
+          .lt('timestamp', end.toISOString());
+
+        if (data?.length) {
+          const mapped = new Set<string>();
+          data.forEach((row: any) => {
+            if (!row.user_id) return;
+            const key = row?.metadata?.gate_period_key || activePeriod;
+            mapped.add(`${row.user_id}:${key}`);
+          });
+          periodMarkedRef.current = mapped;
+        }
+      } catch (e) {
+        console.warn('Could not preload period attendance marks', e);
+      }
+    })();
+  }, [getCurrentPeriodKey]);
 
   // Load students already marked today (present/late) to avoid duplicate detections in gate mode
   useEffect(() => {
@@ -181,17 +242,18 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
 
       // ─── DETECTION-ZONE GATING ───
       // If admin has set a detection box, ignore faces whose center falls outside it.
-      const filteredDetections = detectionBox && videoRef.current
+      const activeZone = detectionBox || autoZone;
+      const filteredDetections = activeZone && videoRef.current
         ? detections.filter((d) => {
             const vw = videoRef.current!.videoWidth || 1;
             const vh = videoRef.current!.videoHeight || 1;
             const cx = (d.detection.box.x + d.detection.box.width / 2) / vw;
             const cy = (d.detection.box.y + d.detection.box.height / 2) / vh;
             return (
-              cx >= detectionBox.x &&
-              cx <= detectionBox.x + detectionBox.w &&
-              cy >= detectionBox.y &&
-              cy <= detectionBox.y + detectionBox.h
+              cx >= activeZone.x &&
+              cx <= activeZone.x + activeZone.w &&
+              cy >= activeZone.y &&
+              cy <= activeZone.y + activeZone.h
             );
           })
         : detections;
@@ -214,13 +276,13 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
 
           // Draw the detection zone (if set) — always visible during gate mode.
           // Dim everything outside the zone and outline it with an animated glow.
-          if (detectionBox) {
+          if (activeZone) {
             const cw = canvasRef.current.width;
             const ch = canvasRef.current.height;
-            const bx = detectionBox.x * cw;
-            const by = detectionBox.y * ch;
-            const bw = detectionBox.w * cw;
-            const bh = detectionBox.h * ch;
+            const bx = activeZone.x * cw;
+            const by = activeZone.y * ch;
+            const bw = activeZone.w * cw;
+            const bh = activeZone.h * ch;
             ctx.save();
             // 1. Dim the area outside the zone using even-odd fill
             ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -259,7 +321,7 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
             });
 
             // 4. Label pill
-            const labelText = (detectionBox as any).mode === 'line' ? 'CROSS LINE' : 'DETECTION ZONE';
+            const labelText = detectionBox ? 'DETECTION ZONE' : 'SMART AUTO ZONE';
             ctx.font = 'bold 11px system-ui, sans-serif';
             const tw = ctx.measureText(labelText).width;
             ctx.fillStyle = 'rgba(6,182,212,0.95)';
@@ -278,17 +340,17 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
 
             // Determine if this face is INSIDE the detection zone
             let insideZone = true;
-            if (detectionBox && videoRef.current) {
+            if (activeZone && videoRef.current) {
               const vw = videoRef.current.videoWidth || 1;
               const vh = videoRef.current.videoHeight || 1;
               const orig = detections[idx].detection.box;
               const cx = (orig.x + orig.width / 2) / vw;
               const cy = (orig.y + orig.height / 2) / vh;
               insideZone =
-                cx >= detectionBox.x &&
-                cx <= detectionBox.x + detectionBox.w &&
-                cy >= detectionBox.y &&
-                cy <= detectionBox.y + detectionBox.h;
+                cx >= activeZone.x &&
+                cx <= activeZone.x + activeZone.w &&
+                cy >= activeZone.y &&
+                cy <= activeZone.y + activeZone.h;
             }
 
             // Color based on recognition status & zone membership
@@ -419,7 +481,9 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
             return [...filtered, { name: studentName, confidence, recognized: isRecognized, timestamp: now }].slice(-5);
           });
 
-          const entry: GateEntry = {
+            const currentPeriodKey = getCurrentPeriodKey();
+
+            const entry: GateEntry = {
             id: uuidv4(),
             studentName,
             studentId,
@@ -430,14 +494,16 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
 
           // Auto-mark attendance for recognized students (once per session)
           // Require ≥50% confidence to avoid false positives.
-          if (
+            if (
             isRecognized &&
             studentId &&
             confidence >= MIN_ATTENDANCE_MARK_CONFIDENCE &&
-            !attendanceMarkedRef.current.has(studentId)
+              !attendanceMarkedRef.current.has(studentId) &&
+              !periodMarkedRef.current.has(`${studentId}:${currentPeriodKey}`)
           ) {
             attendanceMarkedRef.current.add(studentId);
             alreadyMarkedTodayRef.current.add(studentId);
+              periodMarkedRef.current.add(`${studentId}:${currentPeriodKey}`);
             try {
               // Capture the video frame for the notification email
               let capturedImageDataUrl: string | undefined;
@@ -449,7 +515,14 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
                 capCtx?.drawImage(videoRef.current, 0, 0);
                 capturedImageDataUrl = capCanvas.toDataURL('image/jpeg', 0.85);
               }
-               await recordAttendance(studentId, 'present', confidence, undefined, capturedImageDataUrl, 'gate-mode');
+               await recordAttendance(
+                 studentId,
+                 'present',
+                 confidence,
+                 { metadata: { gate_period_key: currentPeriodKey } },
+                 capturedImageDataUrl,
+                 'gate-mode'
+               );
               
               // Send automatic email notification to parent
               const { data: profile } = await supabase
@@ -488,8 +561,18 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
             }
           }
 
+            if (isRecognized && studentId && confidence < MIN_ATTENDANCE_MARK_CONFIDENCE && confidence >= BORDERLINE_RETRY_CONFIDENCE) {
+              const retries = borderlineRetryRef.current.get(studentId) || 0;
+              if (retries < 1) {
+                borderlineRetryRef.current.set(studentId, retries + 1);
+                onPendingCountChange?.(1);
+                continue;
+              }
+            }
+
           onFaceDetected(entry);
         } catch {
+          onPendingCountChange?.(0);
           onFaceDetected({
             id: uuidv4(),
             studentName: 'Unknown Person',
@@ -505,7 +588,7 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
     }
 
     processingRef.current = false;
-  }, [onFaceDetected]);
+  }, [autoZone, detectionBox, getCurrentPeriodKey, onFaceDetected, onPendingCountChange]);
 
   // Detection interval
   useEffect(() => {
@@ -623,6 +706,14 @@ const GateModeScanner = ({ onFaceDetected, isActive }: GateModeScannerProps) => 
           >
             <Square className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
+        </div>
+      )}
+
+      {!isLoading && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
+          <div className="bg-card/80 backdrop-blur rounded-full px-4 py-2 border border-primary/30">
+            <p className="text-[11px] sm:text-xs font-semibold text-foreground">Place face inside highlighted zone</p>
+          </div>
         </div>
       )}
 
