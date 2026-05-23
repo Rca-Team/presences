@@ -151,24 +151,30 @@ serve(async (req) => {
   }
 
   try {
-    // Validate CRON secret for automated calls
-    const cronSecret = req.headers.get('x-cron-secret');
-    const expectedSecret = Deno.env.get('CRON_SECRET');
-    
-    // If no CRON_SECRET is set, fall back to admin user authentication
-    if (expectedSecret && cronSecret !== expectedSecret) {
-      // Try admin authentication as fallback
-      const authHeader = req.headers.get('Authorization');
+    const expectedSecret = Deno.env.get('CRON_SECRET') ?? '';
+    const cronSecret = req.headers.get('x-cron-secret') ?? '';
+    const authHeader = req.headers.get('Authorization');
+
+    if (!expectedSecret && !authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Server is not securely configured for this endpoint.' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const cronAuthorized = !!expectedSecret && cronSecret === expectedSecret;
+
+    if (!cronAuthorized) {
       if (!authHeader) {
         return new Response(
-          JSON.stringify({ error: 'Authentication required - provide x-cron-secret header or admin Authorization' }),
+          JSON.stringify({ error: 'Authentication required - provide x-cron-secret or admin Authorization' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
       const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-      
+
       const authClient = createClient(supabaseUrl, supabaseAnonKey, {
         global: { headers: { Authorization: authHeader } }
       });
@@ -181,7 +187,6 @@ serve(async (req) => {
         );
       }
 
-      // Verify admin role
       const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
       const { data: roleData } = await serviceClient
         .from('user_roles')
@@ -198,7 +203,7 @@ serve(async (req) => {
       }
 
       console.log(`Admin user ${user.id} triggered auto-notifications`);
-    } else if (expectedSecret) {
+    } else {
       console.log('CRON job triggered auto-notifications');
     }
 
