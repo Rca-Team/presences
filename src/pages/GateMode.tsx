@@ -46,6 +46,9 @@ const GateMode = () => {
   const [lateStudent, setLateStudent] = useState<GateEntry | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [totalStudents, setTotalStudents] = useState(0);
+  const [totalPresentToday, setTotalPresentToday] = useState(0);
+  const [lateCount, setLateCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
   const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
   const [cutoffHour, setCutoffHour] = useState(9);
   const [cutoffMinute, setCutoffMinute] = useState(0);
@@ -84,8 +87,29 @@ const GateMode = () => {
         setCutoffMinute(parseInt(parts[1], 10) || 0);
       }
     };
+
+    const fetchTodayStats = async () => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+
+      const { data } = await supabase
+        .from('attendance_records')
+        .select('status')
+        .in('status', ['present', 'late'])
+        .gte('timestamp', start.toISOString())
+        .lt('timestamp', end.toISOString());
+
+      const present = (data || []).length;
+      const late = (data || []).filter((item) => item.status === 'late').length;
+      setTotalPresentToday(present);
+      setLateCount(late);
+    };
+
     fetchTotal();
     fetchCutoff();
+    fetchTodayStats();
   }, []);
 
   // Wake Lock to prevent screen sleep
@@ -181,9 +205,8 @@ const GateMode = () => {
       supabase.from('gate_entries').insert({
         student_id: entry.studentId,
         gate_session_id: sessionId,
-        entry_type: 'entry',
         is_recognized: true,
-        confidence: entry.confidence,
+        confidence_score: entry.confidence,
         gate_name: gateName,
         student_name: entry.studentName
       }).then();
@@ -194,11 +217,10 @@ const GateMode = () => {
       // Record unknown entry
       supabase.from('gate_entries').insert({
         gate_session_id: sessionId,
-        entry_type: 'entry',
         is_recognized: false,
-        confidence: entry.confidence,
+        confidence_score: entry.confidence,
         gate_name: gateName,
-        photo_url: entry.photoUrl,
+        snapshot_url: entry.photoUrl,
         student_name: 'Unknown'
       }).then();
     }
@@ -258,9 +280,27 @@ const GateMode = () => {
 
       {/* Main content - vertical on mobile, horizontal on desktop */}
       <div className={`flex-1 flex relative ${isMobile ? 'flex-col' : 'flex-row'}`}>
+        <div className="absolute top-2 left-2 right-2 z-20 grid grid-cols-2 sm:grid-cols-4 gap-2 pointer-events-none">
+          {[
+            { label: 'Total Students', value: totalStudents },
+            { label: 'Present Today', value: totalPresentToday },
+            { label: 'Late', value: lateCount },
+            { label: 'Pending', value: pendingCount },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-card/85 backdrop-blur border border-border rounded-xl px-3 py-2">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</p>
+              <p className="text-base sm:text-lg font-bold text-foreground tabular-nums">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+
         {/* Camera feed */}
         <div className={isMobile ? 'flex-1 relative' : 'flex-[7] relative'}>
-          <GateModeScanner onFaceDetected={handleFaceDetected} isActive={!isSetup} />
+          <GateModeScanner
+            onFaceDetected={handleFaceDetected}
+            isActive={!isSetup}
+            onPendingCountChange={setPendingCount}
+          />
           
           {/* Entry feedback overlay */}
           <AnimatePresence>
@@ -307,6 +347,9 @@ const GateMode = () => {
               totalEntries={recognizedCount}
               totalStudents={totalStudents}
               uniqueStudents={uniqueStudents}
+                totalPresentToday={totalPresentToday}
+                lateCount={lateCount}
+                pendingCount={pendingCount}
               unknownCount={unknownCount}
               recentEntries={entries.slice(0, 20)}
             />
@@ -335,6 +378,9 @@ const GateMode = () => {
                   totalEntries={recognizedCount}
                   totalStudents={totalStudents}
                   uniqueStudents={uniqueStudents}
+                  totalPresentToday={totalPresentToday}
+                  lateCount={lateCount}
+                  pendingCount={pendingCount}
                   unknownCount={unknownCount}
                   recentEntries={entries.slice(0, 20)}
                 />
