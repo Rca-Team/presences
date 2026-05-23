@@ -52,6 +52,7 @@ const GateMode = () => {
   const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
   const [cutoffHour, setCutoffHour] = useState(9);
   const [cutoffMinute, setCutoffMinute] = useState(0);
+  const [activePeriodKey, setActivePeriodKey] = useState<string>(() => `period-${new Date().toISOString().slice(0, 10)}-default`);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -107,9 +108,31 @@ const GateMode = () => {
       setLateCount(late);
     };
 
+    const fetchActivePeriod = async () => {
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const { data } = await supabase
+        .from('period_timings')
+        .select('period_name, start_time, end_time')
+        .order('start_time', { ascending: true });
+
+      const current = (data || []).find((period) => {
+        const [sh, sm] = String(period.start_time || '00:00:00').split(':').map(Number);
+        const [eh, em] = String(period.end_time || '23:59:59').split(':').map(Number);
+        const start = sh * 60 + sm;
+        const end = eh * 60 + em;
+        return nowMinutes >= start && nowMinutes <= end;
+      });
+
+      if (current?.period_name) {
+        setActivePeriodKey(`period-${now.toISOString().slice(0, 10)}-${current.period_name.replace(/\s+/g, '-').toLowerCase()}`);
+      }
+    };
+
     fetchTotal();
     fetchCutoff();
     fetchTodayStats();
+    fetchActivePeriod();
   }, []);
 
   // Wake Lock to prevent screen sleep
@@ -194,10 +217,16 @@ const GateMode = () => {
 
     if (entry.isRecognized) {
       playSound('success');
+        if (entry.confidence >= 0.5) {
+          setTotalPresentToday((prev) => prev + 1);
+        }
       // Check if late based on configured cutoff time
       const now = new Date();
       if (now.getHours() > cutoffHour || (now.getHours() === cutoffHour && now.getMinutes() >= cutoffMinute)) {
         entry.isLate = true;
+          if (entry.confidence >= 0.5) {
+            setLateCount((prev) => prev + 1);
+          }
         setLateStudent(entry);
         setShowLateForm(true);
       }
@@ -300,6 +329,7 @@ const GateMode = () => {
             onFaceDetected={handleFaceDetected}
             isActive={!isSetup}
             onPendingCountChange={setPendingCount}
+            periodKey={activePeriodKey}
           />
           
           {/* Entry feedback overlay */}
