@@ -276,7 +276,7 @@ const AdminFacesList: React.FC<AdminFacesListProps> = ({
             }
 
             const latest = matches.slice(0, 24);
-            const grouped = latest.reduce<Record<string, { count: number; confidenceSum: number }>>((acc, row: any) => {
+            const grouped = latest.reduce((acc: Record<string, { count: number; confidenceSum: number }>, row: any) => {
               const key = String(row.emotion_label || 'neutral').toLowerCase();
               if (!acc[key]) acc[key] = { count: 0, confidenceSum: 0 };
               acc[key].count += 1;
@@ -284,7 +284,11 @@ const AdminFacesList: React.FC<AdminFacesListProps> = ({
               return acc;
             }, {});
 
-            const [dominantLabel, dominant] = Object.entries(grouped).sort((a, b) => b[1].count - a[1].count)[0] || ['neutral', { count: 0, confidenceSum: 0 }];
+            const dominantEntry = Object.entries(grouped).sort((a, b) => b[1].count - a[1].count)[0] as
+              | [string, { count: number; confidenceSum: number }]
+              | undefined;
+            const dominantLabel = dominantEntry?.[0] || 'neutral';
+            const dominant = dominantEntry?.[1] || { count: 0, confidenceSum: 0 };
             summary[face.employee_id] = {
               label: dominantLabel,
               confidence: dominant.count ? Math.round((dominant.confidenceSum / dominant.count) * 100) : 0,
