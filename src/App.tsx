@@ -32,6 +32,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import EmergencyAlertListener from './components/EmergencyAlertListener';
 import RealtimeNotificationListener from './components/RealtimeNotificationListener';
+import AppExperienceLayer from './components/AppExperienceLayer';
 
 const queryClient = new QueryClient();
 
@@ -235,6 +236,7 @@ function App() {
               <BrowserRouter>
                 <SeoHead />
                 <AnimatedRoutes />
+                <AppExperienceLayer />
                 <MobileSidebar />
                 <PWAInstallPrompt />
                 <EmergencyAlertListener />
