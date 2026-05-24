@@ -199,6 +199,26 @@ Deno.serve(async (req) => {
         return true;
       });
 
+    const emotionQueries = uniqueIds.map((uid) =>
+      supabase
+        .from('emotion_events')
+        .select('id, emotion_label, confidence_score, valence_score, arousal_score, captured_at, metadata')
+        .or(`user_id.eq.${uid},student_id.eq.${uid}`)
+        .order('captured_at', { ascending: false })
+        .limit(200)
+    );
+
+    const emotionResults = await Promise.all(emotionQueries);
+    const emotionSeen = new Set<string>();
+    const emotions = emotionResults
+      .flatMap((r) => r.data || [])
+      .filter((e: any) => {
+        if (emotionSeen.has(e.id)) return false;
+        emotionSeen.add(e.id);
+        return true;
+      })
+      .slice(0, 200);
+
     return new Response(
       JSON.stringify({
         found: true,
@@ -211,6 +231,7 @@ Deno.serve(async (req) => {
         },
         attendance,
         badges,
+        emotions,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
