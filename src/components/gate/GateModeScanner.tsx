@@ -15,6 +15,7 @@ interface GateModeScannerProps {
   isActive: boolean;
   onPendingCountChange?: (count: number) => void;
   periodKey?: string;
+  aiEnhancerEnabled?: boolean;
 }
 
 interface LiveConfidence {
@@ -32,7 +33,7 @@ interface DetectionBox {
   h: number; // 0..1
 }
 
-const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange, periodKey }: GateModeScannerProps) => {
+const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange, periodKey, aiEnhancerEnabled = true }: GateModeScannerProps) => {
   const REDETECTION_COOLDOWN_MS = 5000;
   const DUPLICATE_COOLDOWN_MS = 30000;
   const MIN_RECOGNITION_CONFIDENCE = 0.6;
@@ -490,6 +491,9 @@ const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange, perio
                 const capCtx = capCanvas.getContext('2d');
                 capCtx?.drawImage(videoRef.current, 0, 0);
                 capturedImageDataUrl = capCanvas.toDataURL('image/jpeg', 0.85);
+                if (aiEnhancerEnabled) {
+                  capturedImageDataUrl = await autoEnhance(capturedImageDataUrl, capCanvas);
+                }
               }
                await recordAttendance(
                  studentId,
@@ -646,7 +650,7 @@ const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange, perio
             <span className="text-[10px] sm:text-xs font-medium text-foreground">Live</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {isAIEnhancing && (
+            {aiEnhancerEnabled && isAIEnhancing && (
               <div className="bg-accent/80 backdrop-blur rounded-full px-2 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1">
                 <Wand2 className="h-3 w-3 text-accent-foreground animate-pulse" />
                 <span className="text-[10px] sm:text-xs font-medium text-accent-foreground">Enhancing</span>

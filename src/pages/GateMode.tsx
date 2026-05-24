@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Shield, X, Settings, Volume2, VolumeX, Maximize, Minimize,
-  Users, Clock, AlertTriangle, CheckCircle2, Wifi, WifiOff,
+  Users, Clock, AlertTriangle, CheckCircle2, Wifi, WifiOff, Wand2,
   DoorOpen, Eye, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -53,8 +53,47 @@ const GateMode = () => {
   const [cutoffHour, setCutoffHour] = useState(9);
   const [cutoffMinute, setCutoffMinute] = useState(0);
   const [activePeriodKey, setActivePeriodKey] = useState<string>(() => `period-${new Date().toISOString().slice(0, 10)}-default`);
+  const [aiEnhancerEnabled, setAiEnhancerEnabled] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  const fetchGateStats = useCallback(async () => {
+    try {
+      const [totalRes, attendanceRes] = await Promise.all([
+        supabase
+          .from('face_descriptors')
+          .select('user_id')
+          .eq('is_active', true)
+          .not('user_id', 'is', null),
+        (() => {
+          const start = new Date();
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(start);
+          end.setDate(end.getDate() + 1);
+
+          return supabase
+            .from('attendance_records')
+            .select('user_id, status')
+            .eq('source', 'gate-mode')
+            .in('status', ['present', 'late'])
+            .not('user_id', 'is', null)
+            .gte('timestamp', start.toISOString())
+            .lt('timestamp', end.toISOString());
+        })(),
+      ]);
+
+      const uniqueStudents = new Set((totalRes.data || []).map((row) => row.user_id).filter(Boolean));
+      const todayRows = attendanceRes.data || [];
+      const presentUsers = new Set(todayRows.map((row) => row.user_id).filter(Boolean));
+      const lateUsers = new Set(todayRows.filter((row) => row.status === 'late').map((row) => row.user_id).filter(Boolean));
+
+      setTotalStudents(uniqueStudents.size);
+      setTotalPresentToday(presentUsers.size);
+      setLateCount(lateUsers.size);
+    } catch (error) {
+      console.error('Failed to fetch gate stats:', error);
+    }
+  }, []);
 
   // Track online/offline
   useEffect(() => {
@@ -68,14 +107,8 @@ const GateMode = () => {
     };
   }, []);
 
-  // Fetch total students count and cutoff time
+  // Fetch baseline settings and live stats
   useEffect(() => {
-    const fetchTotal = async () => {
-      const { count } = await supabase
-        .from('face_descriptors')
-        .select('user_id', { count: 'exact', head: true });
-      if (count) setTotalStudents(count);
-    };
     const fetchCutoff = async () => {
       const { data } = await supabase
         .from('attendance_settings')
@@ -87,25 +120,6 @@ const GateMode = () => {
         setCutoffHour(parseInt(parts[0], 10) || 9);
         setCutoffMinute(parseInt(parts[1], 10) || 0);
       }
-    };
-
-    const fetchTodayStats = async () => {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(end.getDate() + 1);
-
-      const { data } = await supabase
-        .from('attendance_records')
-        .select('status')
-        .in('status', ['present', 'late'])
-        .gte('timestamp', start.toISOString())
-        .lt('timestamp', end.toISOString());
-
-      const present = (data || []).length;
-      const late = (data || []).filter((item) => item.status === 'late').length;
-      setTotalPresentToday(present);
-      setLateCount(late);
     };
 
     const fetchActivePeriod = async () => {
@@ -129,11 +143,13 @@ const GateMode = () => {
       }
     };
 
-    fetchTotal();
+    fetchGateStats();
     fetchCutoff();
-    fetchTodayStats();
     fetchActivePeriod();
-  }, []);
+
+    const interval = setInterval(fetchGateStats, 15000);
+    return () => clearInterval(interval);
+  }, [fetchGateStats]);
 
   // Wake Lock to prevent screen sleep
   useEffect(() => {
@@ -217,16 +233,10 @@ const GateMode = () => {
 
     if (entry.isRecognized) {
       playSound('success');
-        if (entry.confidence >= 0.5) {
-          setTotalPresentToday((prev) => prev + 1);
-        }
       // Check if late based on configured cutoff time
       const now = new Date();
       if (now.getHours() > cutoffHour || (now.getHours() === cutoffHour && now.getMinutes() >= cutoffMinute)) {
         entry.isLate = true;
-          if (entry.confidence >= 0.5) {
-            setLateCount((prev) => prev + 1);
-          }
         setLateStudent(entry);
         setShowLateForm(true);
       }
@@ -253,7 +263,9 @@ const GateMode = () => {
         student_name: 'Unknown'
       }).then();
     }
-  }, [sessionId, gateName, playSound]);
+
+    fetchGateStats();
+  }, [sessionId, gateName, playSound, cutoffHour, cutoffMinute, fetchGateStats]);
 
   const endSession = useCallback(async () => {
     if (sessionId) {
@@ -294,6 +306,15 @@ const GateMode = () => {
           <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={() => setSoundEnabled(!soundEnabled)}>
             {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           </Button>
+          <Button
+            variant={aiEnhancerEnabled ? 'default' : 'ghost'}
+            size="sm"
+            className="h-8 sm:h-9 text-xs px-2 sm:px-3"
+            onClick={() => setAiEnhancerEnabled((prev) => !prev)}
+          >
+            <Wand2 className="h-3.5 w-3.5 mr-1" />
+            <span className="hidden sm:inline">AI Enhance {aiEnhancerEnabled ? 'On' : 'Off'}</span>
+          </Button>
           {!isMobile && (
             <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={toggleFullscreen}>
               {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
@@ -309,7 +330,7 @@ const GateMode = () => {
 
       {/* Main content - vertical on mobile, horizontal on desktop */}
       <div className={`flex-1 flex relative ${isMobile ? 'flex-col' : 'flex-row'}`}>
-        <div className="absolute top-2 left-2 right-2 z-20 grid grid-cols-2 sm:grid-cols-4 gap-2 pointer-events-none">
+        {isMobile && <div className="absolute top-2 left-2 right-2 z-20 grid grid-cols-2 sm:grid-cols-4 gap-2 pointer-events-none">
           {[
             { label: 'Total Students', value: totalStudents },
             { label: 'Present Today', value: totalPresentToday },
@@ -321,7 +342,7 @@ const GateMode = () => {
               <p className="text-base sm:text-lg font-bold text-foreground tabular-nums">{stat.value}</p>
             </div>
           ))}
-        </div>
+        </div>}
 
         {/* Camera feed */}
         <div className={isMobile ? 'flex-1 relative' : 'flex-[7] relative'}>
@@ -330,6 +351,7 @@ const GateMode = () => {
             isActive={!isSetup}
             onPendingCountChange={setPendingCount}
             periodKey={activePeriodKey}
+            aiEnhancerEnabled={aiEnhancerEnabled}
           />
           
           {/* Entry feedback overlay */}
