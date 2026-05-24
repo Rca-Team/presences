@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   UserCheck, UserX, Clock, Calendar, TrendingUp,
-  GraduationCap, CheckCircle2, AlertTriangle, XCircle, Search, ArrowLeft, RefreshCw, Award, Flame, Star, Trophy, Sparkles
+  GraduationCap, CheckCircle2, AlertTriangle, XCircle, Search, ArrowLeft, RefreshCw, Award, Flame, Star, Trophy, Sparkles, BrainCircuit
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/Logo';
@@ -40,6 +40,13 @@ interface BadgeItem {
   metadata?: Record<string, any>;
 }
 
+interface EmotionRecord {
+  id: string;
+  emotion_label: string;
+  confidence_score: number | null;
+  captured_at: string;
+}
+
 const STORAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/face-images/`;
 
 export default function ParentPortalPage() {
@@ -54,6 +61,8 @@ export default function ParentPortalPage() {
   const [stats, setStats] = useState({ present: 0, late: 0, absent: 0, total: 0, rate: 0, streak: 0 });
   const [todayStatus, setTodayStatus] = useState<{ status: string; time?: string }>({ status: 'absent' });
   const [badges, setBadges] = useState<BadgeItem[]>([]);
+  const [emotions, setEmotions] = useState<EmotionRecord[]>([]);
+  const [emotionSummary, setEmotionSummary] = useState<{ label: string; confidence: number }>({ label: 'neutral', confidence: 0 });
   const [newBadgeId, setNewBadgeId] = useState<string | null>(null);
 
   const refreshData = useCallback(async () => {
@@ -66,6 +75,7 @@ export default function ParentPortalPage() {
       if (data?.found) {
         setChild(data.student);
         processAttendance(data.attendance);
+        processEmotions((data.emotions || []) as EmotionRecord[]);
         const incoming: BadgeItem[] = data.badges || [];
         setBadges(prev => {
           const prevIds = new Set(prev.map(b => b.id));
@@ -95,6 +105,9 @@ export default function ParentPortalPage() {
         refreshData();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'student_badges' }, () => {
+        refreshData();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'emotion_events' }, () => {
         refreshData();
       })
       .subscribe();
@@ -145,6 +158,7 @@ export default function ParentPortalPage() {
 
       setChild(data.student);
       processAttendance(data.attendance);
+      processEmotions((data.emotions || []) as EmotionRecord[]);
       setBadges(data.badges || []);
     } catch (e) {
       console.error('Search error:', e);
@@ -206,6 +220,31 @@ export default function ParentPortalPage() {
       const rec = dateMap[ds];
       return { day: format(d, 'EEE'), pct: rec?.status === 'present' ? 100 : rec?.status === 'late' ? 75 : 0 };
     }));
+  };
+
+  const processEmotions = (records: EmotionRecord[]) => {
+    const sorted = [...(records || [])]
+      .sort((a, b) => new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime())
+      .slice(0, 40);
+
+    setEmotions(sorted);
+
+    if (!sorted.length) {
+      setEmotionSummary({ label: 'neutral', confidence: 0 });
+      return;
+    }
+
+    const counts = sorted.reduce<Record<string, number>>((acc, item) => {
+      const key = (item.emotion_label || 'neutral').toLowerCase();
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    const [dominantLabel, dominantCount] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] || ['neutral', 0];
+    setEmotionSummary({
+      label: dominantLabel,
+      confidence: Math.round((dominantCount / sorted.length) * 100),
+    });
   };
 
   const getImgUrl = (url: string) => url?.startsWith('data:') ? url : url ? `${STORAGE_URL}${url}` : '';
@@ -353,6 +392,43 @@ export default function ParentPortalPage() {
                 </div>
               </div>
             )}
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <BrainCircuit className="h-4 w-4 text-primary" />
+                  Emotion Insights
+                  <Badge variant="secondary" className="ml-auto text-[10px]">Live</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Dominant Mood</p>
+                    <p className="font-semibold text-foreground capitalize">{emotionSummary.label.replace('-', ' ')}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Confidence</p>
+                    <p className="font-semibold text-primary">{emotionSummary.confidence}%</p>
+                  </div>
+                </div>
+
+                {emotions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-2">No emotion records yet.</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-36 overflow-auto pr-1">
+                    {emotions.slice(0, 8).map((emotion) => (
+                      <div key={emotion.id} className="flex items-center justify-between rounded-md border border-border/60 px-2.5 py-1.5">
+                        <span className="text-xs font-medium text-foreground capitalize">{emotion.emotion_label.replace('-', ' ')}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(new Date(emotion.captured_at), 'h:mm a')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader className="pb-2">
