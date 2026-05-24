@@ -386,6 +386,51 @@ export type Database = {
         }
         Relationships: []
       }
+      emotion_events: {
+        Row: {
+          arousal_score: number | null
+          captured_at: string
+          confidence_score: number | null
+          created_at: string
+          emotion_label: string
+          id: string
+          metadata: Json
+          source: string
+          student_id: string | null
+          updated_at: string
+          user_id: string | null
+          valence_score: number | null
+        }
+        Insert: {
+          arousal_score?: number | null
+          captured_at?: string
+          confidence_score?: number | null
+          created_at?: string
+          emotion_label: string
+          id?: string
+          metadata?: Json
+          source?: string
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          valence_score?: number | null
+        }
+        Update: {
+          arousal_score?: number | null
+          captured_at?: string
+          confidence_score?: number | null
+          created_at?: string
+          emotion_label?: string
+          id?: string
+          metadata?: Json
+          source?: string
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          valence_score?: number | null
+        }
+        Relationships: []
+      }
       face_descriptors: {
         Row: {
           class: string | null

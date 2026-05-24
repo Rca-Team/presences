@@ -9,6 +9,7 @@ import * as faceapi from 'face-api.js';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import DetectionBoxEditor from './DetectionBoxEditor';
+import { saveEmotionEvent } from '@/services/ai/EmotionAnalysisService';
 
 interface GateModeScannerProps {
   onFaceDetected: (entry: GateEntry) => void;
@@ -442,6 +443,20 @@ const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange, perio
               continue;
             }
             recognizedCooldownRef.current.set(studentId, now);
+
+            saveEmotionEvent({
+              userId: studentId,
+              studentId: result?.employee?.employee_id || studentId,
+              source: 'gate-mode',
+              descriptor: detection.descriptor,
+              recognitionConfidence: confidence,
+              metadata: {
+                student_name: result?.employee?.name || studentName,
+                gate_mode: true,
+                gate_period_key: getCurrentPeriodKey(),
+                capture_zone: detectionBox ? 'manual' : 'smart-auto',
+              },
+            }).then();
           }
 
           // Store label for canvas overlay

@@ -13,6 +13,7 @@ import {
   recognizeFace,
   recordAttendance
 } from '@/services/face-recognition/RecognitionService';
+import { saveEmotionEvent } from '@/services/ai/EmotionAnalysisService';
 import { sendAutoParentNotification } from '@/services/notification/AutoNotificationService';
 import { getCutoffTime, isPastCutoffTime, getAttendanceCutoffTime } from '@/services/attendance/AttendanceSettingsService';
 import * as faceapi from 'face-api.js';
@@ -356,6 +357,21 @@ const FuturisticFaceScanner: React.FC<FuturisticFaceScannerProps> = ({ onScanCom
             const autoMarkEligible =
               strictScore >= thresholdTarget ||
               !!strictMetrics?.autoMarkEligible;
+
+            saveEmotionEvent({
+              userId: result.employee.id,
+              studentId: result.employee.employee_id || result.employee.id,
+              source: 'ai-scan',
+              descriptor,
+              recognitionConfidence: result.confidence,
+              metadata: {
+                student_name: result.employee.name,
+                strict_mode: true,
+                strict_score: strictScore,
+                strict_threshold_target: thresholdTarget,
+                auto_mark_eligible: autoMarkEligible,
+              },
+            }).then();
             
             if (autoMarkEligible) {
               try {

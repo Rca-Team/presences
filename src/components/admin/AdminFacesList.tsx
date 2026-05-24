@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, User, UserCheck, UserX, Calendar, MoreVertical, Phone, Filter, ArrowUpDown, Clock, CheckCircle2, XCircle, SortAsc, SortDesc, Trash2, BellRing, X } from 'lucide-react';
+import { Search, User, UserCheck, UserX, Calendar, MoreVertical, Phone, Filter, ArrowUpDown, Clock, CheckCircle2, XCircle, SortAsc, SortDesc, Trash2, BellRing, X, BrainCircuit } from 'lucide-react';
 import NotificationService from './NotificationService';
 import ExistingUserContactPopup from './ExistingUserContactPopup';
 import { 
@@ -71,6 +71,7 @@ const AdminFacesList: React.FC<AdminFacesListProps> = ({
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [todayStatuses, setTodayStatuses] = useState<Record<string, { status: TodayStatus; time?: string }>>({});
+  const [emotionStatsByStudent, setEmotionStatsByStudent] = useState<Record<string, { label: string; confidence: number; samples: number }>>({});
 
   const extractSection = (department: string): string => {
     if (!department) return '';
@@ -254,6 +255,54 @@ const AdminFacesList: React.FC<AdminFacesListProps> = ({
 
         setFaces(processedFaces);
         fetchTodayStatuses(processedFaces);
+        const fetchEmotionStats = async () => {
+          const { data: emotionRows } = await supabase
+            .from('emotion_events')
+            .select('user_id, student_id, emotion_label, confidence_score')
+            .order('captured_at', { ascending: false })
+            .limit(2000);
+
+          const summary: Record<string, { label: string; confidence: number; samples: number }> = {};
+
+          processedFaces.forEach((face) => {
+            const matches = (emotionRows || []).filter((row: any) =>
+              (face.user_id && row.user_id === face.user_id) ||
+              (row.student_id && [face.employee_id, face.user_id].filter(Boolean).includes(row.student_id)),
+            );
+
+            if (!matches.length) {
+              summary[face.employee_id] = { label: 'neutral', confidence: 0, samples: 0 };
+              return;
+            }
+
+            const latest = matches.slice(0, 24);
+            const grouped = latest.reduce((acc: Record<string, { count: number; confidenceSum: number }>, row: any) => {
+              const key = String(row.emotion_label || 'neutral').toLowerCase();
+              if (!acc[key]) acc[key] = { count: 0, confidenceSum: 0 };
+              acc[key].count += 1;
+              acc[key].confidenceSum += Number(row.confidence_score || 0);
+              return acc;
+            }, {});
+
+            let dominantLabel = 'neutral';
+            let dominant = { count: 0, confidenceSum: 0 };
+            for (const [label, stats] of Object.entries(grouped) as [string, { count: number; confidenceSum: number }][]) {
+              if (stats.count > dominant.count) {
+                dominantLabel = label;
+                dominant = stats;
+              }
+            }
+            summary[face.employee_id] = {
+              label: dominantLabel,
+              confidence: dominant.count ? Math.round((dominant.confidenceSum / dominant.count) * 100) : 0,
+              samples: latest.length,
+            };
+          });
+
+          setEmotionStatsByStudent(summary);
+        };
+
+        fetchEmotionStats();
         
         if (selectedFaceId && !processedFaces.some(face => face.id === selectedFaceId)) {
           setSelectedFaceId(null);
@@ -287,6 +336,15 @@ const AdminFacesList: React.FC<AdminFacesListProps> = ({
       .channel('attendance-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'attendance_records' }, 
+        () => {
+          clearTimeout(updateTimeout);
+          updateTimeout = setTimeout(() => {
+            fetchRegisteredFaces();
+          }, 1000);
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'emotion_events' },
         () => {
           clearTimeout(updateTimeout);
           updateTimeout = setTimeout(() => {
@@ -605,6 +663,10 @@ const AdminFacesList: React.FC<AdminFacesListProps> = ({
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
+                          <Badge variant="outline" className="hidden md:inline-flex gap-1 text-[10px]">
+                            <BrainCircuit className="w-3 h-3" />
+                            {emotionStatsByStudent[face.employee_id]?.label?.replace('-', ' ') || 'neutral'}
+                          </Badge>
                           {getStatusBadge(face.employee_id)}
                           
                           <DropdownMenu>
