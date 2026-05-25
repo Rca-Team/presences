@@ -1,22 +1,32 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  UserCheck, UserX, Clock, Calendar, TrendingUp,
-  GraduationCap, CheckCircle2, AlertTriangle, XCircle, Search, ArrowLeft, RefreshCw, Award, Flame, Star, Trophy, Sparkles, BrainCircuit
+  ArrowLeft,
+  Award,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  GraduationCap,
+  Medal,
+  RefreshCw,
+  Search,
+  TrendingUp,
+  Trophy,
+  UserCheck,
+  UserX,
+  Users,
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import Logo from '@/components/Logo';
 import { Link } from 'react-router-dom';
-import { format, startOfMonth, eachDayOfInterval, isWeekend, subDays, isSameDay, isToday } from 'date-fns';
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
-} from 'recharts';
+import { eachDayOfInterval, format, isSameDay, isToday, isWeekend, startOfMonth, subDays } from 'date-fns';
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import Logo from '@/components/Logo';
 
 interface ChildInfo {
   id: string;
@@ -26,10 +36,9 @@ interface ChildInfo {
   image_url: string;
 }
 
-interface DayRecord {
-  date: Date;
-  status: 'present' | 'late' | 'absent';
-  time?: string;
+interface AttendancePoint {
+  status: string;
+  timestamp: string;
 }
 
 interface BadgeItem {
@@ -37,14 +46,29 @@ interface BadgeItem {
   badge_name: string | null;
   badge_type: string | null;
   awarded_at: string;
-  metadata?: Record<string, any>;
 }
 
-interface EmotionRecord {
+interface LeaderboardItem {
   id: string;
-  emotion_label: string;
-  confidence_score: number | null;
-  captured_at: string;
+  student_id: string | null;
+  student_name: string | null;
+  class: string | null;
+  section: string | null;
+  score: number | null;
+  rank: number | null;
+}
+
+interface ParentSummary {
+  workingDays: number;
+  presentDays: number;
+  lateDays: number;
+  absentDays: number;
+  attendanceRate: number;
+  streak: number;
+  todayStatus: string;
+  todayCheckinTime: string | null;
+  badgeCount: number;
+  todayGateEntries: number;
 }
 
 const STORAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/face-images/`;
@@ -56,92 +80,18 @@ export default function ParentPortalPage() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [child, setChild] = useState<ChildInfo | null>(null);
-  const [monthRecords, setMonthRecords] = useState<DayRecord[]>([]);
-  const [trendData, setTrendData] = useState<{ day: string; pct: number }[]>([]);
-  const [stats, setStats] = useState({ present: 0, late: 0, absent: 0, total: 0, rate: 0, streak: 0 });
-  const [todayStatus, setTodayStatus] = useState<{ status: string; time?: string }>({ status: 'absent' });
+  const [attendance, setAttendance] = useState<AttendancePoint[]>([]);
   const [badges, setBadges] = useState<BadgeItem[]>([]);
-  const [emotions, setEmotions] = useState<EmotionRecord[]>([]);
-  const [emotionSummary, setEmotionSummary] = useState<{ label: string; confidence: number }>({ label: 'neutral', confidence: 0 });
-  const [newBadgeId, setNewBadgeId] = useState<string | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
+  const [studentLeaderboard, setStudentLeaderboard] = useState<LeaderboardItem | null>(null);
+  const [summary, setSummary] = useState<ParentSummary | null>(null);
+  const [isLive, setIsLive] = useState(false);
 
-  const refreshData = useCallback(async () => {
-    if (!studentId.trim() || !phoneNo.trim()) return;
+  const getImgUrl = (url: string) => (url?.startsWith('data:') ? url : url ? `${STORAGE_URL}${url}` : '');
+
+  const fetchPortalData = useCallback(async (showError = false) => {
+    if (!studentId.trim() || !phoneNo.trim()) return false;
     const cleanPhone = phoneNo.trim().replace(/[^0-9+]/g, '').substring(0, 15);
-    try {
-      const { data } = await supabase.functions.invoke('parent-lookup', {
-        body: { student_id: studentId.trim(), phone: cleanPhone },
-      });
-      if (data?.found) {
-        setChild(data.student);
-        processAttendance(data.attendance);
-        processEmotions((data.emotions || []) as EmotionRecord[]);
-        const incoming: BadgeItem[] = data.badges || [];
-        setBadges(prev => {
-          const prevIds = new Set(prev.map(b => b.id));
-          const fresh = incoming.find(b => !prevIds.has(b.id));
-          if (fresh && prev.length > 0) {
-            setNewBadgeId(fresh.id);
-            toast({ title: '🏆 New Badge!', description: fresh.badge_name || 'Achievement unlocked' });
-            setTimeout(() => setNewBadgeId(null), 4000);
-          }
-          return incoming;
-        });
-      }
-    } catch (e) {
-      console.error('Refresh error:', e);
-    }
-  }, [studentId, phoneNo, toast]);
-
-  // Realtime: auto-refresh when attendance changes
-  useEffect(() => {
-    if (!child) return;
-    const channel = supabase
-      .channel('parent-portal-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'attendance_records' }, () => {
-        refreshData();
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gate_entries' }, () => {
-        refreshData();
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'student_badges' }, () => {
-        refreshData();
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'emotion_events' }, () => {
-        refreshData();
-      })
-      .subscribe();
-
-    // Polling fallback (every 20s) — RLS hides new attendance rows from anon
-    // clients so postgres_changes alone won't always fire for the parent.
-    const interval = setInterval(() => { refreshData(); }, 20000);
-
-    // Refresh when tab becomes visible again
-    const onVisible = () => { if (document.visibilityState === 'visible') refreshData(); };
-    document.addEventListener('visibilitychange', onVisible);
-
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [child, refreshData]);
-
-  const handleSearch = async () => {
-    if (!studentId.trim() || !phoneNo.trim()) {
-      toast({ title: 'Required', description: 'Please enter both Student ID and Phone No.', variant: 'destructive' });
-      return;
-    }
-
-    const cleanPhone = phoneNo.trim().replace(/[^0-9+]/g, '').substring(0, 15);
-    if (cleanPhone.replace(/[^0-9]/g, '').length < 10) {
-      toast({ title: 'Invalid Phone', description: 'Please enter a valid 10-digit phone number.', variant: 'destructive' });
-      return;
-    }
-
-    setLoading(true);
-    setSearched(true);
-    setChild(null);
 
     try {
       const { data, error } = await supabase.functions.invoke('parent-lookup', {
@@ -149,119 +99,130 @@ export default function ParentPortalPage() {
       });
 
       if (error) throw error;
-
-      if (!data?.found) {
-        toast({ title: 'Not Found', description: 'No student found with this ID and Phone combination.', variant: 'destructive' });
-        setLoading(false);
-        return;
-      }
+      if (!data?.found) return false;
 
       setChild(data.student);
-      processAttendance(data.attendance);
-      processEmotions((data.emotions || []) as EmotionRecord[]);
+      setAttendance(data.attendance || []);
       setBadges(data.badges || []);
-    } catch (e) {
-      console.error('Search error:', e);
-      toast({ title: 'Error', description: 'Something went wrong. Please try again.', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const normalizeStatus = (s: string) => {
-    const lower = (s || '').toLowerCase().trim();
-    if (lower === 'unauthorized' || lower.includes('present')) return 'present';
-    if (lower.includes('late')) return 'late';
-    return lower;
-  };
-
-  const processAttendance = (attendance: { status: string; timestamp: string }[]) => {
-    const today = new Date();
-    const monthStart = startOfMonth(today);
-    const workingDays = eachDayOfInterval({ start: monthStart, end: today }).filter(d => !isWeekend(d));
-
-    const dateMap: Record<string, { status: string; time: string }> = {};
-    attendance.forEach(r => {
-      const ds = format(new Date(r.timestamp), 'yyyy-MM-dd');
-      const status = normalizeStatus(r.status);
-      if (!dateMap[ds]) {
-        dateMap[ds] = { status, time: format(new Date(r.timestamp), 'h:mm a') };
-      } else if (status === 'present' && dateMap[ds].status === 'late') {
-        // Present overrides late
-        dateMap[ds] = { status, time: format(new Date(r.timestamp), 'h:mm a') };
+      setLeaderboard(data.leaderboard || []);
+      setStudentLeaderboard(data.student_leaderboard || null);
+      setSummary(data.summary || null);
+      return true;
+    } catch (err) {
+      console.error('Parent portal lookup error:', err);
+      if (showError) {
+        toast({ title: 'Error', description: 'Unable to load parent portal data right now.', variant: 'destructive' });
       }
-    });
-
-    const monthRecs: DayRecord[] = workingDays.map(d => {
-      const ds = format(d, 'yyyy-MM-dd');
-      const rec = dateMap[ds];
-      return { date: d, status: rec ? (rec.status as 'present' | 'late') : 'absent', time: rec?.time };
-    });
-    setMonthRecords(monthRecs);
-
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const todayRec = dateMap[todayStr];
-    setTodayStatus(todayRec ? { status: todayRec.status, time: todayRec.time } : { status: isWeekend(today) ? 'weekend' : 'absent' });
-
-    const present = monthRecs.filter(r => r.status === 'present').length;
-    const late = monthRecs.filter(r => r.status === 'late').length;
-    const absent = monthRecs.filter(r => r.status === 'absent').length;
-    const total = workingDays.length;
-    let streak = 0;
-    for (let i = monthRecs.length - 1; i >= 0; i--) {
-      if (monthRecs[i].status === 'present' || monthRecs[i].status === 'late') streak++;
-      else break;
+      return false;
     }
-    setStats({ present, late, absent, total, rate: total > 0 ? Math.round(((present + late) / total) * 100) : 0, streak });
+  }, [studentId, phoneNo, toast]);
 
-    const last7 = eachDayOfInterval({ start: subDays(today, 9), end: today }).filter(d => !isWeekend(d)).slice(-7);
-    setTrendData(last7.map(d => {
-      const ds = format(d, 'yyyy-MM-dd');
-      const rec = dateMap[ds];
-      return { day: format(d, 'EEE'), pct: rec?.status === 'present' ? 100 : rec?.status === 'late' ? 75 : 0 };
-    }));
-  };
-
-  const processEmotions = (records: EmotionRecord[]) => {
-    const sorted = [...(records || [])]
-      .sort((a, b) => new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime())
-      .slice(0, 40);
-
-    setEmotions(sorted);
-
-    if (!sorted.length) {
-      setEmotionSummary({ label: 'neutral', confidence: 0 });
+  const handleSearch = async () => {
+    if (!studentId.trim() || !phoneNo.trim()) {
+      toast({ title: 'Required', description: 'Enter both Student ID and phone number.', variant: 'destructive' });
       return;
     }
 
-    const counts = sorted.reduce<Record<string, number>>((acc, item) => {
-      const key = (item.emotion_label || 'neutral').toLowerCase();
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {});
+    const digits = phoneNo.replace(/[^0-9]/g, '');
+    if (digits.length < 10) {
+      toast({ title: 'Invalid phone', description: 'Please enter a valid phone number.', variant: 'destructive' });
+      return;
+    }
 
-    const [dominantLabel, dominantCount] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] || ['neutral', 0];
-    setEmotionSummary({
-      label: dominantLabel,
-      confidence: Math.round((dominantCount / sorted.length) * 100),
+    setLoading(true);
+    setSearched(true);
+    const ok = await fetchPortalData(true);
+    if (!ok) {
+      setChild(null);
+      setAttendance([]);
+      setBadges([]);
+      setLeaderboard([]);
+      setStudentLeaderboard(null);
+      setSummary(null);
+      toast({ title: 'No match', description: 'No student found with this Student ID and phone.', variant: 'destructive' });
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (!child) return;
+
+    const refresh = () => fetchPortalData();
+    const channel = supabase
+      .channel(`parent-portal-live-${studentId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gate_entries' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_badges' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_leaderboard' }, refresh)
+      .subscribe((status) => setIsLive(status === 'SUBSCRIBED'));
+
+    const interval = setInterval(refresh, 15000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      supabase.removeChannel(channel);
+      setIsLive(false);
+    };
+  }, [child, fetchPortalData, studentId]);
+
+  const monthRecords = useMemo(() => {
+    const dateMap: Record<string, string> = {};
+    attendance.forEach((r) => {
+      const key = format(new Date(r.timestamp), 'yyyy-MM-dd');
+      const s = (r.status || '').toLowerCase();
+      const normalized = s === 'unauthorized' || s.includes('present') ? 'present' : s.includes('late') ? 'late' : s;
+      if (!dateMap[key]) dateMap[key] = normalized;
+      if (normalized === 'present' && dateMap[key] === 'late') dateMap[key] = 'present';
     });
-  };
 
-  const getImgUrl = (url: string) => url?.startsWith('data:') ? url : url ? `${STORAGE_URL}${url}` : '';
+    const start = startOfMonth(new Date());
+    const end = new Date();
+    return eachDayOfInterval({ start, end }).map((d) => {
+      const key = format(d, 'yyyy-MM-dd');
+      return { date: d, status: dateMap[key] || 'absent' };
+    });
+  }, [attendance]);
 
-  const statusConfig: Record<string, { icon: React.ReactNode; label: string; color: string; bg: string }> = {
-    present: { icon: <CheckCircle2 className="h-8 w-8" />, label: 'Present', color: 'text-green-500', bg: 'bg-green-500/10 border-green-500/30' },
-    late: { icon: <AlertTriangle className="h-8 w-8" />, label: 'Late', color: 'text-yellow-500', bg: 'bg-yellow-500/10 border-yellow-500/30' },
-    absent: { icon: <XCircle className="h-8 w-8" />, label: 'Absent', color: 'text-red-500', bg: 'bg-red-500/10 border-red-500/30' },
-    weekend: { icon: <Calendar className="h-8 w-8" />, label: 'Weekend', color: 'text-muted-foreground', bg: 'bg-muted/50 border-border' },
-  };
+  const weeklyTrend = useMemo(() => {
+    const recent = eachDayOfInterval({ start: subDays(new Date(), 9), end: new Date() })
+      .filter((d) => !isWeekend(d))
+      .slice(-7);
 
-  const sc = statusConfig[todayStatus.status] || statusConfig.absent;
+    return recent.map((d) => {
+      const rec = monthRecords.find((m) => isSameDay(m.date, d));
+      return {
+        day: format(d, 'EEE'),
+        pct: rec?.status === 'present' ? 100 : rec?.status === 'late' ? 75 : 0,
+      };
+    });
+  }, [monthRecords]);
+
+  const statusLabel = (summary?.todayStatus || 'absent').toLowerCase();
+  const statusView = {
+    present: { title: 'Present', chip: 'bg-primary/10 text-primary border-primary/30' },
+    late: { title: 'Late', chip: 'bg-secondary text-secondary-foreground border-border' },
+    absent: { title: 'Absent', chip: 'bg-muted text-muted-foreground border-border' },
+    weekend: { title: 'Weekend', chip: 'bg-muted text-muted-foreground border-border' },
+  }[statusLabel as 'present' | 'late' | 'absent' | 'weekend'] || { title: 'Absent', chip: 'bg-muted text-muted-foreground border-border' };
+
+  const statCards = [
+    { label: 'Attendance Rate', value: `${summary?.attendanceRate ?? 0}%`, icon: TrendingUp },
+    { label: 'Present', value: summary?.presentDays ?? 0, icon: UserCheck },
+    { label: 'Late', value: summary?.lateDays ?? 0, icon: Clock },
+    { label: 'Absent', value: summary?.absentDays ?? 0, icon: UserX },
+    { label: 'Gate Entries Today', value: summary?.todayGateEntries ?? 0, icon: CheckCircle2 },
+    { label: 'Badges', value: summary?.badgeCount ?? 0, icon: Award },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between max-w-lg mx-auto">
+      <header className="sticky top-0 z-40 border-b border-border bg-card/80 px-4 py-3 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
           <div className="flex items-center gap-2">
             <Link to="/">
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -269,54 +230,42 @@ export default function ParentPortalPage() {
               </Button>
             </Link>
             <Logo />
-            <span className="font-bold text-foreground text-sm">Parent Portal</span>
+            <span className="text-sm font-bold text-foreground">Parent Portal</span>
           </div>
+          {child && (
+            <Badge variant="outline" className="gap-1 text-[11px]">
+              <span className={`h-2 w-2 rounded-full ${isLive ? 'bg-primary' : 'bg-muted-foreground'}`} />
+              {isLive ? 'Realtime' : 'Syncing'}
+            </Badge>
+          )}
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto p-4 space-y-4 pb-20">
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-5 pb-20">
         {!child && (
-          <Card className="border-primary/20">
+          <Card className="border-primary/20 bg-gradient-to-b from-card to-muted/20">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Search className="h-5 w-5 text-primary" />
-                Find Your Child's Attendance
+                Parent Access
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Enter your child's Student ID and your registered phone number to view attendance.
-              </p>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <Label htmlFor="studentId">Student ID</Label>
-                  <Input
-                    id="studentId"
-                    placeholder="e.g. STU001"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                    maxLength={50}
-                    className="mt-1"
-                  />
+                  <Input id="studentId" placeholder="e.g. STU001" value={studentId} onChange={(e) => setStudentId(e.target.value)} className="mt-1" />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Parent Phone Number</Label>
-                  <Input
-                    id="phone"
-                    placeholder="e.g. 9876543210"
-                    value={phoneNo}
-                    onChange={(e) => setPhoneNo(e.target.value)}
-                    type="tel"
-                    maxLength={15}
-                    className="mt-1"
-                  />
+                  <Label htmlFor="phone">Parent Phone</Label>
+                  <Input id="phone" type="tel" placeholder="e.g. 9876543210" value={phoneNo} onChange={(e) => setPhoneNo(e.target.value)} className="mt-1" />
                 </div>
-                <Button onClick={handleSearch} disabled={loading} className="w-full">
-                  {loading ? 'Searching...' : 'View Attendance'}
-                </Button>
               </div>
+              <Button onClick={handleSearch} disabled={loading} className="w-full md:w-auto">
+                {loading ? 'Loading details...' : 'Open Parent Dashboard'}
+              </Button>
               {searched && !child && !loading && (
-                <p className="text-sm text-destructive text-center">No matching student found. Please check your details.</p>
+                <p className="text-sm text-destructive">No student found with these details.</p>
               )}
             </CardContent>
           </Card>
@@ -324,242 +273,222 @@ export default function ParentPortalPage() {
 
         {child && (
           <>
-            <Button variant="ghost" size="sm" onClick={() => { setChild(null); setSearched(false); }}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Search Another
-            </Button>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button variant="outline" size="sm" onClick={() => fetchPortalData(true)}>
+                <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setChild(null);
+                  setSearched(false);
+                }}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" /> Search Another Student
+              </Button>
+            </div>
 
-            <Card className="border-primary/20">
-              <CardContent className="p-4 flex items-center gap-4">
-                <Avatar className="h-16 w-16 border-2 border-primary/30">
-                  <AvatarImage src={getImgUrl(child.image_url)} />
-                  <AvatarFallback className="text-xl">{child.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h2 className="font-bold text-lg text-foreground">{child.name}</h2>
-                  <div className="flex gap-2 mt-1">
-                    <Badge variant="secondary" className="text-xs">
-                      <GraduationCap className="h-3 w-3 mr-1" /> Class {child.category}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">ID: {child.employee_id}</Badge>
+            <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-card to-muted/20">
+              <CardContent className="p-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                  <Avatar className="h-20 w-20 border-2 border-primary/30">
+                    <AvatarImage src={getImgUrl(child.image_url)} />
+                    <AvatarFallback className="text-2xl">{child.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-black text-foreground">{child.name}</h2>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Badge variant="secondary" className="gap-1">
+                        <GraduationCap className="h-3 w-3" /> Class {child.category}
+                      </Badge>
+                      <Badge variant="outline">ID: {child.employee_id}</Badge>
+                      <Badge className={statusView.chip}>{statusView.title} Today</Badge>
+                    </div>
                   </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-black text-primary">{stats.rate}%</div>
-                  <p className="text-[10px] text-muted-foreground">Attendance</p>
+
+                  <div className="text-left md:text-right">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Current Streak</p>
+                    <p className="text-3xl font-black text-primary">{summary?.streak ?? 0}d</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className={`border ${sc.bg}`}>
-              <CardContent className="p-5 flex items-center gap-4">
-                <div className={sc.color}>{sc.icon}</div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Today's Status</p>
-                  <p className={`text-xl font-bold ${sc.color}`}>{sc.label}</p>
-                </div>
-                {todayStatus.time && (
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Check-in</p>
-                    <p className="font-semibold text-foreground">{todayStatus.time}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: 'Working', value: stats.total, icon: <Calendar className="h-4 w-4 text-blue-500" /> },
-                { label: 'Present', value: stats.present, icon: <UserCheck className="h-4 w-4 text-green-500" /> },
-                { label: 'Late', value: stats.late, icon: <Clock className="h-4 w-4 text-yellow-500" /> },
-                { label: 'Absent', value: stats.absent, icon: <UserX className="h-4 w-4 text-red-500" /> },
-              ].map(s => (
-                <Card key={s.label}>
-                  <CardContent className="p-3 text-center">
-                    <div className="flex justify-center mb-1">{s.icon}</div>
-                    <p className="text-xl font-bold text-foreground">{s.value}</p>
-                    <p className="text-[10px] text-muted-foreground">{s.label}</p>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {statCards.map((s) => (
+                <Card key={s.label} className="border-border/80 bg-card/90">
+                  <CardContent className="p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <s.icon className="h-4 w-4 text-primary" />
+                      <span className="text-[10px] text-muted-foreground">Live</span>
+                    </div>
+                    <p className="text-2xl font-black text-foreground">{s.value}</p>
+                    <p className="text-xs text-muted-foreground">{s.label}</p>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            {stats.streak > 0 && (
-              <div className="bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 flex items-center gap-3">
-                <span className="text-2xl">🔥</span>
-                <div>
-                  <p className="font-bold text-foreground">{stats.streak}-Day Streak!</p>
-                  <p className="text-xs text-muted-foreground">Consecutive attendance days</p>
-                </div>
-              </div>
-            )}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+              <Card className="lg:col-span-3">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    Real Attendance Timeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="max-h-80 space-y-2 overflow-auto pr-1">
+                    {attendance.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-muted-foreground">No attendance records yet.</p>
+                    ) : (
+                      attendance.slice(0, 20).map((item, idx) => (
+                        <div key={`${item.timestamp}-${idx}`} className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2">
+                          <div>
+                            <p className="text-sm font-semibold capitalize text-foreground">{item.status}</p>
+                            <p className="text-xs text-muted-foreground">{format(new Date(item.timestamp), 'EEE, d MMM yyyy • h:mm a')}</p>
+                          </div>
+                          <Badge variant="outline">Verified</Badge>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Trophy className="h-4 w-4 text-primary" />
+                    Realtime Badges & Achievements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {badges.length === 0 ? (
+                    <p className="py-4 text-center text-sm text-muted-foreground">No achievements yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {badges.slice(0, 8).map((b) => (
+                        <div key={b.id} className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <Medal className="h-4 w-4 text-primary" />
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">{b.badge_name || b.badge_type || 'Badge'}</p>
+                              <p className="text-xs text-muted-foreground">{format(new Date(b.awarded_at), 'd MMM yyyy')}</p>
+                            </div>
+                          </div>
+                          <Badge variant="secondary">Unlocked</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+              <Card className="lg:col-span-3">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    Weekly Attendance Trend
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={170}>
+                    <LineChart data={weeklyTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                        }}
+                        formatter={(v: number) => [`${v}%`, 'Attendance']}
+                      />
+                      <Line type="monotone" dataKey="pct" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ fill: 'hsl(var(--primary))', r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Users className="h-4 w-4 text-primary" />
+                    Real Class Leaderboard
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {leaderboard.length === 0 ? (
+                    <p className="py-4 text-center text-sm text-muted-foreground">No leaderboard data yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {leaderboard.map((row, idx) => {
+                        const isCurrent = studentLeaderboard?.id === row.id;
+                        return (
+                          <div
+                            key={row.id || idx}
+                            className={`flex items-center justify-between rounded-lg border px-3 py-2 ${isCurrent ? 'border-primary/40 bg-primary/10' : 'border-border/70 bg-muted/20'}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 text-center text-sm font-bold text-foreground">#{row.rank || idx + 1}</div>
+                              <p className="text-sm font-semibold text-foreground">{row.student_name || 'Student'}</p>
+                            </div>
+                            <Badge variant={isCurrent ? 'default' : 'secondary'}>{row.score || 0} pts</Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <BrainCircuit className="h-4 w-4 text-primary" />
-                  Emotion Insights
-                  <Badge variant="secondary" className="ml-auto text-[10px]">Live</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2">
-                  <div>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Dominant Mood</p>
-                    <p className="font-semibold text-foreground capitalize">{emotionSummary.label.replace('-', ' ')}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Confidence</p>
-                    <p className="font-semibold text-primary">{emotionSummary.confidence}%</p>
-                  </div>
-                </div>
-
-                {emotions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-2">No emotion records yet.</p>
-                ) : (
-                  <div className="space-y-1.5 max-h-36 overflow-auto pr-1">
-                    {emotions.slice(0, 8).map((emotion) => (
-                      <div key={emotion.id} className="flex items-center justify-between rounded-md border border-border/60 px-2.5 py-1.5">
-                        <span className="text-xs font-medium text-foreground capitalize">{emotion.emotion_label.replace('-', ' ')}</span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {format(new Date(emotion.captured_at), 'h:mm a')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-yellow-500" />
-                  Achievements & Badges
-                  <Badge variant="secondary" className="ml-auto text-[10px]">{badges.length}</Badge>
-                </CardTitle>
+                <CardTitle className="text-base">{format(new Date(), 'MMMM yyyy')} Attendance Grid</CardTitle>
               </CardHeader>
               <CardContent>
-                {badges.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">
-                    No badges yet. Keep up consistent attendance to earn rewards! ✨
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {badges.slice(0, 9).map(b => {
-                      const isNew = newBadgeId === b.id;
-                      const type = (b.badge_type || '').toLowerCase();
-                      const Icon = type.includes('streak') ? Flame
-                        : type.includes('star') ? Star
-                        : type.includes('trophy') ? Trophy
-                        : type.includes('spark') ? Sparkles
-                        : Award;
-                      const color = type.includes('streak') ? 'text-orange-500 bg-orange-500/10 border-orange-500/30'
-                        : type.includes('gold') || type.includes('trophy') ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30'
-                        : type.includes('star') ? 'text-blue-500 bg-blue-500/10 border-blue-500/30'
-                        : 'text-primary bg-primary/10 border-primary/30';
-                      return (
-                        <div
-                          key={b.id}
-                          className={`relative rounded-xl border p-2 flex flex-col items-center text-center ${color} ${isNew ? 'animate-pulse ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
-                        >
-                          {isNew && (
-                            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-full">
-                              NEW
-                            </span>
-                          )}
-                          <Icon className="h-6 w-6 mb-1" />
-                          <p className="text-[10px] font-semibold leading-tight line-clamp-2">
-                            {b.badge_name || b.badge_type || 'Badge'}
-                          </p>
-                          <p className="text-[8px] text-muted-foreground mt-0.5">
-                            {format(new Date(b.awarded_at), 'd MMM')}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {format(new Date(), 'MMMM yyyy')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-4">
                 <div className="grid grid-cols-7 gap-1.5">
-                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-                    <div key={i} className="text-[10px] text-center text-muted-foreground font-medium">{d}</div>
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d) => (
+                    <div key={d} className="text-center text-[10px] font-medium text-muted-foreground">{d}</div>
                   ))}
+
                   {(() => {
-                    const ms = startOfMonth(new Date());
-                    const firstDay = ms.getDay();
+                    const monthStart = startOfMonth(new Date());
+                    const firstDay = monthStart.getDay();
                     const offset = firstDay === 0 ? 6 : firstDay - 1;
-                    const blanks = Array.from({ length: offset }, (_, i) => <div key={`b-${i}`} />);
-                    const allDays = eachDayOfInterval({ start: ms, end: new Date() });
-                    const dayEls = allDays.map(d => {
-                      const rec = monthRecords.find(r => isSameDay(r.date, d));
-                      const isWknd = isWeekend(d);
+                    const blanks = Array.from({ length: offset }, (_, i) => <div key={`blank-${i}`} />);
+
+                    const dayBoxes = monthRecords.map((entry) => {
+                      const weekend = isWeekend(entry.date);
+                      const modeClass = weekend
+                        ? 'bg-muted/30 text-muted-foreground'
+                        : entry.status === 'present'
+                          ? 'bg-primary text-primary-foreground'
+                          : entry.status === 'late'
+                            ? 'bg-secondary text-secondary-foreground'
+                            : 'bg-muted text-muted-foreground';
+
                       return (
                         <div
-                          key={d.toISOString()}
-                          className={`aspect-square rounded-md flex items-center justify-center text-[10px] font-medium ${
-                            isWknd ? 'text-muted-foreground bg-muted/20' :
-                            rec?.status === 'present' ? 'text-white bg-green-500' :
-                            rec?.status === 'late' ? 'text-white bg-yellow-500' :
-                            'text-white bg-red-500/80'
-                          } ${isToday(d) ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''}`}
+                          key={entry.date.toISOString()}
+                          className={`aspect-square rounded-md text-[10px] font-medium flex items-center justify-center ${modeClass} ${isToday(entry.date) ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''}`}
                         >
-                          {d.getDate()}
+                          {entry.date.getDate()}
                         </div>
                       );
                     });
-                    return [...blanks, ...dayEls];
+
+                    return [...blanks, ...dayBoxes];
                   })()}
                 </div>
-                <div className="flex items-center gap-4 mt-3 justify-center">
-                  {[
-                    { color: 'bg-green-500', label: 'Present' },
-                    { color: 'bg-yellow-500', label: 'Late' },
-                    { color: 'bg-red-500/80', label: 'Absent' },
-                  ].map(l => (
-                    <div key={l.label} className="flex items-center gap-1">
-                      <div className={`w-2.5 h-2.5 rounded-sm ${l.color}`} />
-                      <span className="text-[10px] text-muted-foreground">{l.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  Weekly Trend
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={160}>
-                  <LineChart data={trendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        fontSize: '12px'
-                      }}
-                      formatter={(v: number) => [`${v}%`, 'Attendance']}
-                    />
-                    <Line type="monotone" dataKey="pct" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ fill: 'hsl(var(--primary))', r: 4 }} />
-                  </LineChart>
-                </ResponsiveContainer>
               </CardContent>
             </Card>
           </>
