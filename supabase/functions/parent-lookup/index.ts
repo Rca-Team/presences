@@ -14,6 +14,44 @@ function normalizeStatus(status: string): string {
   return s;
 }
 
+function buildMonthlySummary(dayMap: Record<string, { status: string; timestamp: string }>) {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const todayKey = now.toISOString().slice(0, 10);
+
+  let workingDays = 0;
+  let presentDays = 0;
+  let lateDays = 0;
+
+  for (const d = new Date(monthStart); d <= now; d.setDate(d.getDate() + 1)) {
+    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+    if (isWeekend) continue;
+    workingDays += 1;
+    const key = d.toISOString().slice(0, 10);
+    const status = dayMap[key]?.status;
+    if (status === 'present') presentDays += 1;
+    if (status === 'late') lateDays += 1;
+  }
+
+  const absentDays = Math.max(0, workingDays - presentDays - lateDays);
+  const attendanceRate = workingDays > 0 ? Math.round(((presentDays + lateDays) / workingDays) * 100) : 0;
+
+  let streak = 0;
+  for (const d = new Date(now); d >= monthStart; d.setDate(d.getDate() - 1)) {
+    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+    if (isWeekend) continue;
+    const key = d.toISOString().slice(0, 10);
+    const status = dayMap[key]?.status;
+    if (status === 'present' || status === 'late') streak += 1;
+    else break;
+  }
+
+  const todayStatus = dayMap[todayKey]?.status || ((now.getDay() === 0 || now.getDay() === 6) ? 'weekend' : 'absent');
+  const todayCheckinTime = dayMap[todayKey]?.timestamp || null;
+
+  return { workingDays, presentDays, lateDays, absentDays, attendanceRate, streak, todayStatus, todayCheckinTime };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -179,7 +217,7 @@ Deno.serve(async (req) => {
     const attendance = Object.values(dayMap).map(d => ({
       status: d.status,
       timestamp: d.timestamp,
-    }));
+    })).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     // Fetch awarded badges for this student (any matching identifier)
     const badgeQueries = uniqueIds.map(uid =>
@@ -198,6 +236,25 @@ Deno.serve(async (req) => {
         badgeSeen.add(b.id);
         return true;
       });
+
+    const studentIdCandidates = [empId, ...uniqueIds].map((v) => String(v || '').toLowerCase()).filter(Boolean);
+
+    let leaderboardQuery = supabase
+      .from('class_leaderboard')
+      .select('id, student_id, student_name, class, section, score, rank, updated_at')
+      .order('rank', { ascending: true, nullsFirst: false })
+      .order('score', { ascending: false })
+      .limit(25);
+
+    if (meta.class) leaderboardQuery = leaderboardQuery.eq('class', String(meta.class));
+    if (meta.section) leaderboardQuery = leaderboardQuery.eq('section', String(meta.section));
+
+    const { data: leaderboardRows } = await leaderboardQuery;
+    const leaderboard = (leaderboardRows || []).slice(0, 10);
+    const studentLeaderboard = (leaderboardRows || []).find((row: any) => {
+      const sid = String(row.student_id || '').toLowerCase();
+      return studentIdCandidates.includes(sid);
+    }) || null;
 
     const emotionQueries = uniqueIds.map((uid) =>
       supabase
@@ -219,6 +276,10 @@ Deno.serve(async (req) => {
       })
       .slice(0, 200);
 
+    const summary = buildMonthlySummary(dayMap);
+    const todayDatePrefix = new Date().toISOString().slice(0, 10);
+    const todayGateEntries = gateEntries.filter((g: any) => String(g.entry_time || '').startsWith(todayDatePrefix)).length;
+
     return new Response(
       JSON.stringify({
         found: true,
@@ -232,6 +293,13 @@ Deno.serve(async (req) => {
         attendance,
         badges,
         emotions,
+        leaderboard,
+        student_leaderboard: studentLeaderboard,
+        summary: {
+          ...summary,
+          badgeCount: badges.length,
+          todayGateEntries,
+        },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
