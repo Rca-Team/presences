@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { useState } from "react";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
@@ -23,7 +22,6 @@ import DataBackup from './pages/DataBackup';
 import FaceModelValidator from './pages/FaceModelValidator';
 import TeacherPortal from './pages/TeacherPortal';
 
-import SplashAnimation from "./components/SplashAnimation";
 import { AttendanceProvider } from './contexts/AttendanceContext';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from './hooks/use-theme';
@@ -214,8 +212,6 @@ function AnimatedRoutes() {
 }
 
 function App() {
-  const [showSplash, setShowSplash] = useState(false);
-
   return (
     <ThemeProvider defaultTheme="dark">
       <AttendanceProvider>
@@ -223,14 +219,6 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            
-            {/* Splash Animation */}
-            {showSplash && (
-              <SplashAnimation 
-                onComplete={() => setShowSplash(false)}
-                duration={3500} 
-              />
-            )}
             
             <HelmetProvider>
               <BrowserRouter>
