@@ -17,6 +17,8 @@ interface GateModeScannerProps {
   onPendingCountChange?: (count: number) => void;
   periodKey?: string;
   aiEnhancerEnabled?: boolean;
+  cutoffHour?: number;
+  cutoffMinute?: number;
 }
 
 interface LiveConfidence {
@@ -34,7 +36,15 @@ interface DetectionBox {
   h: number; // 0..1
 }
 
-const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange, periodKey, aiEnhancerEnabled = true }: GateModeScannerProps) => {
+const GateModeScanner = ({
+  onFaceDetected,
+  isActive,
+  onPendingCountChange,
+  periodKey,
+  aiEnhancerEnabled = true,
+  cutoffHour = 9,
+  cutoffMinute = 0,
+}: GateModeScannerProps) => {
   const REDETECTION_COOLDOWN_MS = 5000;
   const DUPLICATE_COOLDOWN_MS = 30000;
   const MIN_RECOGNITION_CONFIDENCE = 0.6;
@@ -474,13 +484,17 @@ const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange, perio
 
             const currentPeriodKey = getCurrentPeriodKey();
 
+            const nowTime = new Date();
+            const isLateNow = nowTime.getHours() > cutoffHour || (nowTime.getHours() === cutoffHour && nowTime.getMinutes() >= cutoffMinute);
+
             const entry: GateEntry = {
             id: uuidv4(),
             studentName,
             studentId,
-            time: new Date(),
+            time: nowTime,
             isRecognized,
             confidence,
+            isLate: isLateNow,
           };
 
           // Auto-mark attendance for recognized students (once per session)
@@ -512,45 +526,12 @@ const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange, perio
               }
                await recordAttendance(
                  studentId,
-                 'present',
+                 isLateNow ? 'late' : 'present',
                  confidence,
                  { metadata: { gate_period_key: currentPeriodKey } },
                  capturedImageDataUrl,
                  'gate-mode'
                );
-              
-              // Send automatic email notification to parent
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('parent_email, parent_name, display_name')
-                .eq('user_id', studentId)
-                .maybeSingle();
-              
-              if (profile?.parent_email) {
-                const timeStr = new Date().toLocaleTimeString();
-                const dateStr = new Date().toLocaleDateString();
-                supabase.functions.invoke('send-notification', {
-                  body: {
-                    recipient: {
-                      email: profile.parent_email,
-                      name: profile.parent_name || 'Parent/Guardian'
-                    },
-                    message: {
-                      subject: `✅ ${profile.display_name || studentName} arrived at school`,
-                      body: `Your child ${profile.display_name || studentName} was recognized at the school gate and marked present on ${dateStr} at ${timeStr}.\n\nThis is an automated notification from the Gate Entry System.`
-                    },
-                    student: {
-                      id: studentId,
-                      name: profile.display_name || studentName,
-                      status: 'present'
-                    },
-                    targetUserId: studentId
-                  }
-                }).then(res => {
-                  if (res.error) console.error('Gate notification error:', res.error);
-                  else console.log('Gate entry notification sent for:', studentName);
-                });
-              }
             } catch (err) {
               console.error('Failed to record attendance:', err);
             }
@@ -590,7 +571,7 @@ const GateModeScanner = ({ onFaceDetected, isActive, onPendingCountChange, perio
     }
 
     processingRef.current = false;
-  }, [autoZone, detectionBox, getCurrentPeriodKey, onFaceDetected, syncPendingCount]);
+  }, [autoZone, cutoffHour, cutoffMinute, detectionBox, getCurrentPeriodKey, onFaceDetected, syncPendingCount]);
 
   // Detection interval
   useEffect(() => {
