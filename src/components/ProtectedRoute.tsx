@@ -122,14 +122,7 @@ export function ProtectedRoute({ children, requireAdmin = false, requireRoles }:
   }, [navigate, location.pathname, location.search, location.hash, requireAdmin, requireRoles]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-        <div className="text-center space-y-4">
-          <div className="h-12 w-12 mx-auto rounded-full border-2 border-cyan-500 border-t-transparent animate-spin"></div>
-          <p className="text-slate-400">Loading...</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (!isAuthenticated) return null;
