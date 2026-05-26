@@ -45,19 +45,26 @@ const AttendanceStatusParentEmail = ({
       <Preview>{`${studentName || 'Student'} marked ${meta.label}`}</Preview>
       <Body style={main}>
         <Container style={container}>
+          <Section style={topLine} />
           <Img src={LOGO_URL} alt="Presence Logo" width="140" height="40" style={logo} />
-          <Heading style={h1}>Presence Attendance Update</Heading>
-          <Text style={text}>Dear {parentName || 'Parent/Guardian'},</Text>
-          <Section style={{ ...badgeBox, backgroundColor: meta.bg }}>
-            <Text style={{ ...badge, color: meta.color }}>{meta.emoji} {meta.label}</Text>
+          <Heading style={h1}>Realtime Attendance Alert</Heading>
+          <Text style={text}>Hello {parentName || 'Parent/Guardian'},</Text>
+
+          <Section style={{ ...heroCard, borderColor: meta.color }}>
+            <Text style={{ ...badge, color: meta.color, backgroundColor: meta.bg }}>{meta.emoji} {meta.label}</Text>
+            <Text style={heroTitle}>{studentName || 'Your child'} attendance updated</Text>
+            <Text style={heroSub}>Recorded at {shownTime}</Text>
           </Section>
-          <Text style={textStrong}>
-            {studentName || 'Your child'} has been marked <strong>{meta.label}</strong>.
-          </Text>
+
           <Section style={infoCard}>
-            <Text style={infoLine}><strong>Student:</strong> {studentName || 'Student'}</Text>
-            <Text style={infoLine}><strong>Status:</strong> {meta.label}</Text>
-            <Text style={infoLine}><strong>Marked at:</strong> {shownTime}</Text>
+            <Text style={infoLabel}>Student</Text>
+            <Text style={infoValue}>{studentName || 'Student'}</Text>
+            <Section style={divider} />
+            <Text style={infoLabel}>Current status</Text>
+            <Text style={{ ...infoValue, color: meta.color }}>{meta.label}</Text>
+            <Section style={divider} />
+            <Text style={infoLabel}>Timestamp</Text>
+            <Text style={infoValue}>{shownTime}</Text>
           </Section>
 
           {shouldShowPhoto && (
@@ -67,7 +74,7 @@ const AttendanceStatusParentEmail = ({
             </Section>
           )}
 
-          <Text style={muted}>Real-time attendance alert from Presence Smart School.</Text>
+          <Text style={muted}>This update is generated instantly from your school gate and attendance system.</Text>
         </Container>
       </Body>
     </Html>
@@ -92,15 +99,24 @@ export const template = {
 
 const main = {
   backgroundColor: '#ffffff',
-  fontFamily: 'Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+  fontFamily: 'Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
   margin: '0',
-  padding: '24px',
+  padding: '18px',
 }
 
 const container = {
-  border: '1px solid hsl(220 15% 90%)',
-  borderRadius: '12px',
+  border: '1px solid hsl(220 20% 88%)',
+  borderRadius: '14px',
   padding: '24px',
+  backgroundColor: '#ffffff',
+}
+
+const topLine = {
+  height: '4px',
+  width: '100%',
+  borderRadius: '999px',
+  backgroundColor: 'hsl(212 100% 47%)',
+  marginBottom: '16px',
 }
 
 const logo = {
@@ -110,7 +126,8 @@ const logo = {
 const h1 = {
   margin: '0 0 16px',
   color: 'hsl(220 25% 10%)',
-  fontSize: '22px',
+  fontSize: '24px',
+  letterSpacing: '0',
 }
 
 const text = {
@@ -129,34 +146,64 @@ const muted = {
   color: 'hsl(220 15% 40%)',
   fontSize: '12px',
   lineHeight: '18px',
-  margin: '14px 0 0',
+  margin: '16px 0 0',
 }
 
-const badgeBox = {
-  borderRadius: '10px',
-  padding: '10px 12px',
+const heroCard = {
+  border: '1px solid hsl(220 20% 88%)',
+  borderRadius: '12px',
+  padding: '14px 14px 12px',
   marginBottom: '14px',
+  backgroundColor: 'hsl(210 20% 98%)',
 }
 
 const badge = {
-  margin: '0',
-  fontSize: '13px',
+  margin: '0 0 10px',
+  fontSize: '12px',
+  fontWeight: '700',
+  display: 'inline-block',
+  padding: '5px 10px',
+  borderRadius: '999px',
+}
+
+const heroTitle = {
+  margin: '0 0 4px',
+  color: 'hsl(220 25% 10%)',
+  fontSize: '16px',
   fontWeight: '700',
 }
 
+const heroSub = {
+  margin: '0',
+  color: 'hsl(220 15% 40%)',
+  fontSize: '12px',
+}
+
 const infoCard = {
-  border: '1px solid hsl(220 15% 90%)',
+  border: '1px solid hsl(220 20% 88%)',
   borderRadius: '10px',
-  backgroundColor: 'hsl(210 20% 98%)',
+  backgroundColor: '#ffffff',
   padding: '12px 14px',
   marginBottom: '14px',
 }
 
-const infoLine = {
-  color: 'hsl(220 25% 14%)',
-  fontSize: '13px',
-  lineHeight: '20px',
-  margin: '0 0 6px',
+const infoLabel = {
+  color: 'hsl(220 15% 40%)',
+  fontSize: '11px',
+  fontWeight: '600',
+  margin: '0 0 2px',
+}
+
+const infoValue = {
+  color: 'hsl(220 25% 12%)',
+  fontSize: '14px',
+  fontWeight: '600',
+  margin: '0',
+}
+
+const divider = {
+  borderBottom: '1px solid hsl(220 20% 92%)',
+  margin: '10px 0',
 }
 
 const photoWrap = {
