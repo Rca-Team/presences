@@ -233,9 +233,8 @@ const GateMode = () => {
 
     if (entry.isRecognized) {
       playSound('success');
-      // Check if late based on configured cutoff time
-      const now = new Date();
-      if (now.getHours() > cutoffHour || (now.getHours() === cutoffHour && now.getMinutes() >= cutoffMinute)) {
+      // Late state comes from scanner timing logic and is persisted in attendance record.
+      if (entry.isLate) {
         entry.isLate = true;
         setLateStudent(entry);
         setShowLateForm(true);
@@ -265,7 +264,7 @@ const GateMode = () => {
     }
 
     fetchGateStats();
-  }, [sessionId, gateName, playSound, cutoffHour, cutoffMinute, fetchGateStats]);
+  }, [sessionId, gateName, playSound, fetchGateStats]);
 
   const endSession = useCallback(async () => {
     if (sessionId) {
@@ -352,6 +351,8 @@ const GateMode = () => {
             onPendingCountChange={setPendingCount}
             periodKey={activePeriodKey}
             aiEnhancerEnabled={aiEnhancerEnabled}
+            cutoffHour={cutoffHour}
+            cutoffMinute={cutoffMinute}
           />
           
           {/* Entry feedback overlay */}

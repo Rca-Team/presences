@@ -53,10 +53,32 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const { data: profileData } = await supabaseClient.from('profiles').select('parent_email, parent_name, parent_phone').eq('user_id', studentId).maybeSingle();
-    const parentEmail = profileData?.parent_email;
-    const parentName = profileData?.parent_name || 'Parent/Guardian';
-    const parentPhone = profileData?.parent_phone;
+    const { data: profileData } = await supabaseClient
+      .from('profiles')
+      .select('parent_email, parent_name, phone, display_name, metadata')
+      .eq('user_id', studentId)
+      .maybeSingle();
+
+    let parentEmail = profileData?.parent_email || null;
+    let parentName = profileData?.parent_name || 'Parent/Guardian';
+    let parentPhone = (profileData as any)?.metadata?.parent_phone || profileData?.phone || null;
+
+    // Fallback: if profile is missing parent email, recover from latest registration metadata.
+    if (!parentEmail) {
+      const { data: registrationRecord } = await supabaseClient
+        .from('attendance_records')
+        .select('device_info, student_name')
+        .eq('user_id', studentId)
+        .eq('status', 'registered')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const metadata = (registrationRecord as any)?.device_info?.metadata || {};
+      parentEmail = metadata?.parent_email || null;
+      parentName = metadata?.parent_name || parentName;
+      parentPhone = metadata?.parent_phone || parentPhone;
+    }
 
     const results = { emailSent: false, whatsappSent: false, smsSent: false, errors: [] as string[] };
     const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });

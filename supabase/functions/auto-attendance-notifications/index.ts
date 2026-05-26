@@ -80,31 +80,29 @@ async function fanOutNotification(client: any, n: {
     } catch (e) { console.error('inapp failed', e); }
   }
 
-  // 2) Email via existing transactional email pipeline
+  // 2) Email via app email pipeline
   if (channels.email && n.parentEmail) {
     try {
-      await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
-        },
-        body: JSON.stringify({
-          to: n.parentEmail,
-          template: 'attendance-status-parent',
-          data: {
+      const idempotencyKey = `auto-attendance-${n.userId}-${n.status}-${n.date}`;
+      const { data, error } = await client.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'attendance-status-parent',
+          recipientEmail: n.parentEmail,
+          idempotencyKey,
+          templateData: {
             parentName: n.parentName,
             studentName: n.studentName,
             status: n.status,
-            time: n.time,
-            date: n.date,
+            timestamp: `${n.date} ${n.time}`,
             class: n.class,
             section: n.section,
-            subject: n.subject,
-            body: n.body,
           },
-        }),
+        },
       });
+
+      if (error || !data?.success) {
+        console.error('email failed', error || data);
+      }
     } catch (e) { console.error('email failed', e); }
   }
 
