@@ -803,6 +803,26 @@ const GateModeScanner = ({
           >
             <Square className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
+
+          <button
+            onClick={() => setAssistantVoiceEnabled((prev) => !prev)}
+            className={`backdrop-blur rounded-full p-2 sm:p-2.5 transition-colors ml-1 ${
+              assistantVoiceEnabled ? 'bg-primary/80 text-primary-foreground' : 'bg-card/80 hover:bg-card text-foreground'
+            }`}
+            title={assistantVoiceEnabled ? 'Voice assistant on' : 'Voice assistant off'}
+          >
+            {assistantVoiceEnabled ? <Mic className="h-4 w-4 sm:h-5 sm:w-5" /> : <MicOff className="h-4 w-4 sm:h-5 sm:w-5" />}
+          </button>
+
+          <button
+            onClick={() => setIsPausedByVoice((prev) => !prev)}
+            className={`backdrop-blur rounded-full p-2 sm:p-2.5 transition-colors ml-1 ${
+              isPausedByVoice ? 'bg-amber-500 text-amber-950' : 'bg-card/80 hover:bg-card text-foreground'
+            }`}
+            title={isPausedByVoice ? 'Resume scanner' : 'Pause scanner'}
+          >
+            {isPausedByVoice ? <PlayCircle className="h-4 w-4 sm:h-5 sm:w-5" /> : <PauseCircle className="h-4 w-4 sm:h-5 sm:w-5" />}
+          </button>
         </div>
       )}
 
@@ -893,6 +913,29 @@ const GateModeScanner = ({
           </div>
         )}
       </AnimatePresence>
+
+      {!isLoading && assistantDecision && (
+        <div className="absolute bottom-24 sm:bottom-20 right-2 sm:right-3 z-20 max-w-[280px] rounded-xl border border-primary/30 bg-card/85 backdrop-blur-xl p-3 shadow-2xl">
+          <div className="flex items-center gap-2">
+            <Brain className="h-4 w-4 text-primary" />
+            <p className="text-xs font-semibold text-foreground">Attendance AI Assistant</p>
+            <span className="ml-auto text-[10px] font-bold text-primary">
+              {Math.round((assistantDecision.confidence || 0) * 100)}%
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground leading-snug">{assistantDecision.reasoning}</p>
+          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-foreground/80">
+            <span className="rounded-full bg-primary/15 px-2 py-0.5">{assistantDecision.decision.replace('_', ' ')}</span>
+            {assistantDecision.shouldAdjustZone && (
+              <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-cyan-300">zone adjusted</span>
+            )}
+            {isPausedByVoice && <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-300">paused</span>}
+          </div>
+          {voiceCommand && (
+            <p className="mt-2 text-[10px] text-muted-foreground truncate">Voice: “{voiceCommand}”</p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
