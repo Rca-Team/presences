@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import DetectionBoxEditor from './DetectionBoxEditor';
 import { saveEmotionEvent } from '@/services/ai/EmotionAnalysisService';
+import { getAttendanceAssistantDecision, type AttendanceAssistantDecision } from '@/services/ai/AttendanceAIAssistantService';
 
 interface GateModeScannerProps {
   onFaceDetected: (entry: GateEntry) => void;
@@ -71,9 +72,26 @@ const GateModeScanner = ({
   const periodMarkedRef = useRef<Set<string>>(new Set());
   const borderlineRetryRef = useRef<Map<string, number>>(new Map());
   const [autoZone, setAutoZone] = useState<DetectionBox | null>(null);
+  const [assistantDecision, setAssistantDecision] = useState<AttendanceAssistantDecision | null>(null);
+  const [assistantVoiceEnabled, setAssistantVoiceEnabled] = useState(true);
+  const [voiceCommand, setVoiceCommand] = useState<string>('');
+  const [isPausedByVoice, setIsPausedByVoice] = useState(false);
+  const assistantLastRunRef = useRef(0);
+  const assistantBusyRef = useRef(false);
+  const recognitionRef = useRef<any>(null);
   // Store per-face labels for canvas overlay
   const faceLabelsRef = useRef<Map<string, { name: string; confidence: number; recognized: boolean }>>(new Map());
   const { isEnhancing: isAIEnhancing, autoEnhance } = usePhotoEnhancer();
+
+  const speak = useCallback((text: string) => {
+    if (!assistantVoiceEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 0.9;
+    window.speechSynthesis.speak(utterance);
+  }, [assistantVoiceEnabled]);
 
   const syncPendingCount = useCallback(() => {
     if (!onPendingCountChange) return;
