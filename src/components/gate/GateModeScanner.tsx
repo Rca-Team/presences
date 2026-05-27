@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { Eye, Loader2, Scan, Zap, ShieldCheck, ShieldAlert, SwitchCamera, Wand2, Square, Save, X as XIcon } from 'lucide-react';
+import { Eye, Loader2, Scan, Zap, ShieldCheck, ShieldAlert, SwitchCamera, Wand2, Square, Save, X as XIcon, Mic, MicOff, PauseCircle, PlayCircle, Brain } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { GateEntry } from '@/pages/GateMode';
 import { loadModels, areModelsLoaded } from '@/services/face-recognition/ModelService';
@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import DetectionBoxEditor from './DetectionBoxEditor';
 import { saveEmotionEvent } from '@/services/ai/EmotionAnalysisService';
+import { getAttendanceAssistantDecision, type AttendanceAssistantDecision } from '@/services/ai/AttendanceAIAssistantService';
 
 interface GateModeScannerProps {
   onFaceDetected: (entry: GateEntry) => void;
@@ -71,9 +72,26 @@ const GateModeScanner = ({
   const periodMarkedRef = useRef<Set<string>>(new Set());
   const borderlineRetryRef = useRef<Map<string, number>>(new Map());
   const [autoZone, setAutoZone] = useState<DetectionBox | null>(null);
+  const [assistantDecision, setAssistantDecision] = useState<AttendanceAssistantDecision | null>(null);
+  const [assistantVoiceEnabled, setAssistantVoiceEnabled] = useState(true);
+  const [voiceCommand, setVoiceCommand] = useState<string>('');
+  const [isPausedByVoice, setIsPausedByVoice] = useState(false);
+  const assistantLastRunRef = useRef(0);
+  const assistantBusyRef = useRef(false);
+  const recognitionRef = useRef<any>(null);
   // Store per-face labels for canvas overlay
   const faceLabelsRef = useRef<Map<string, { name: string; confidence: number; recognized: boolean }>>(new Map());
   const { isEnhancing: isAIEnhancing, autoEnhance } = usePhotoEnhancer();
+
+  const speak = useCallback((text: string) => {
+    if (!assistantVoiceEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 0.9;
+    window.speechSynthesis.speak(utterance);
+  }, [assistantVoiceEnabled]);
 
   const syncPendingCount = useCallback(() => {
     if (!onPendingCountChange) return;
@@ -85,6 +103,67 @@ const GateModeScanner = ({
     if (periodKey) return periodKey;
     return `period-${new Date().toISOString().slice(0, 10)}-default`;
   }, [periodKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event: any) => {
+      const transcript = event?.results?.[event.results.length - 1]?.[0]?.transcript?.toLowerCase?.() || '';
+      setVoiceCommand(transcript);
+
+      if (transcript.includes('pause scan') || transcript.includes('hold scanning')) {
+        setIsPausedByVoice(true);
+        speak('Scanner paused by voice command.');
+      }
+      if (transcript.includes('resume scan') || transcript.includes('continue scanning')) {
+        setIsPausedByVoice(false);
+        speak('Scanner resumed.');
+      }
+      if (transcript.includes('tight zone')) {
+        const z = detectionBox || autoZone;
+        if (z) {
+          setDetectionBox({
+            x: Math.min(0.9, z.x + 0.02),
+            y: Math.min(0.9, z.y + 0.02),
+            w: Math.max(0.2, z.w - 0.04),
+            h: Math.max(0.2, z.h - 0.04),
+          });
+          speak('Detection area tightened.');
+        }
+      }
+      if (transcript.includes('wider zone') || transcript.includes('expand zone')) {
+        const z = detectionBox || autoZone;
+        if (z) {
+          setDetectionBox({
+            x: Math.max(0, z.x - 0.02),
+            y: Math.max(0, z.y - 0.02),
+            w: Math.min(1, z.w + 0.04),
+            h: Math.min(1, z.h + 0.04),
+          });
+          speak('Detection area expanded.');
+        }
+      }
+    };
+
+    if (assistantVoiceEnabled && isActive) {
+      try {
+        recognition.start();
+        recognitionRef.current = recognition;
+      } catch {}
+    }
+
+    return () => {
+      try { recognition.stop(); } catch {}
+      recognitionRef.current = null;
+    };
+  }, [assistantVoiceEnabled, isActive, detectionBox, autoZone, speak]);
 
   // Load saved detection box for the active gate (uses first active gate row)
   useEffect(() => {
@@ -215,7 +294,7 @@ const GateModeScanner = ({
 
   // Continuous detection loop
   const detectLoop = useCallback(async () => {
-    if (processingRef.current || !videoRef.current || videoRef.current.paused) return;
+    if (isPausedByVoice || processingRef.current || !videoRef.current || videoRef.current.paused) return;
     processingRef.current = true;
 
     try {
@@ -246,9 +325,44 @@ const GateModeScanner = ({
           })
         : detections;
 
+      const now = Date.now();
+
+      if (!assistantBusyRef.current && now - assistantLastRunRef.current > 2500) {
+        assistantBusyRef.current = true;
+        assistantLastRunRef.current = now;
+        const avgConfidence = filteredDetections.length
+          ? filteredDetections.reduce((sum, d) => sum + d.detection.score, 0) / filteredDetections.length
+          : 0;
+
+        const recognizedInFrame = filteredDetections.reduce((count, d) => {
+          const descriptorKey = Array.from(d.descriptor.slice(0, 8)).map(v => v.toFixed(2)).join(',');
+          const existing = faceLabelsRef.current.get(descriptorKey);
+          return existing?.recognized ? count + 1 : count;
+        }, 0);
+
+        getAttendanceAssistantDecision({
+          facesInFrame: filteredDetections.length,
+          recognizedFaces: recognizedInFrame,
+          unknownFaces: Math.max(0, filteredDetections.length - recognizedInFrame),
+          averageConfidence: avgConfidence,
+          fps,
+          currentZone: activeZone,
+          cameraFacingMode: facingMode,
+        })
+          .then((decision) => {
+            setAssistantDecision(decision);
+            if (decision.shouldAdjustZone && decision.suggestedZone && !editingBox) {
+              setDetectionBox(decision.suggestedZone);
+            }
+            if (decision.voicePrompt) speak(decision.voicePrompt);
+          })
+          .finally(() => {
+            assistantBusyRef.current = false;
+          });
+      }
+
       // FPS counter
       fpsCounterRef.current.frames++;
-      const now = Date.now();
       if (now - fpsCounterRef.current.lastTime >= 1000) {
         setFps(fpsCounterRef.current.frames);
         fpsCounterRef.current = { frames: 0, lastTime: now };
@@ -571,7 +685,7 @@ const GateModeScanner = ({
     }
 
     processingRef.current = false;
-  }, [autoZone, cutoffHour, cutoffMinute, detectionBox, getCurrentPeriodKey, onFaceDetected, syncPendingCount]);
+  }, [autoZone, cutoffHour, cutoffMinute, detectionBox, getCurrentPeriodKey, onFaceDetected, syncPendingCount, isPausedByVoice, fps, facingMode, editingBox, speak]);
 
   // Detection interval
   useEffect(() => {
@@ -689,6 +803,26 @@ const GateModeScanner = ({
           >
             <Square className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
+
+          <button
+            onClick={() => setAssistantVoiceEnabled((prev) => !prev)}
+            className={`backdrop-blur rounded-full p-2 sm:p-2.5 transition-colors ml-1 ${
+              assistantVoiceEnabled ? 'bg-primary/80 text-primary-foreground' : 'bg-card/80 hover:bg-card text-foreground'
+            }`}
+            title={assistantVoiceEnabled ? 'Voice assistant on' : 'Voice assistant off'}
+          >
+            {assistantVoiceEnabled ? <Mic className="h-4 w-4 sm:h-5 sm:w-5" /> : <MicOff className="h-4 w-4 sm:h-5 sm:w-5" />}
+          </button>
+
+          <button
+            onClick={() => setIsPausedByVoice((prev) => !prev)}
+            className={`backdrop-blur rounded-full p-2 sm:p-2.5 transition-colors ml-1 ${
+              isPausedByVoice ? 'bg-amber-500 text-amber-950' : 'bg-card/80 hover:bg-card text-foreground'
+            }`}
+            title={isPausedByVoice ? 'Resume scanner' : 'Pause scanner'}
+          >
+            {isPausedByVoice ? <PlayCircle className="h-4 w-4 sm:h-5 sm:w-5" /> : <PauseCircle className="h-4 w-4 sm:h-5 sm:w-5" />}
+          </button>
         </div>
       )}
 
@@ -779,6 +913,29 @@ const GateModeScanner = ({
           </div>
         )}
       </AnimatePresence>
+
+      {!isLoading && assistantDecision && (
+        <div className="absolute bottom-24 sm:bottom-20 right-2 sm:right-3 z-20 max-w-[280px] rounded-xl border border-primary/30 bg-card/85 backdrop-blur-xl p-3 shadow-2xl">
+          <div className="flex items-center gap-2">
+            <Brain className="h-4 w-4 text-primary" />
+            <p className="text-xs font-semibold text-foreground">Attendance AI Assistant</p>
+            <span className="ml-auto text-[10px] font-bold text-primary">
+              {Math.round((assistantDecision.confidence || 0) * 100)}%
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground leading-snug">{assistantDecision.reasoning}</p>
+          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-foreground/80">
+            <span className="rounded-full bg-primary/15 px-2 py-0.5">{assistantDecision.decision.replace('_', ' ')}</span>
+            {assistantDecision.shouldAdjustZone && (
+              <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-cyan-300">zone adjusted</span>
+            )}
+            {isPausedByVoice && <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-300">paused</span>}
+          </div>
+          {voiceCommand && (
+            <p className="mt-2 text-[10px] text-muted-foreground truncate">Voice: “{voiceCommand}”</p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
