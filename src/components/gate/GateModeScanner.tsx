@@ -325,6 +325,8 @@ const GateModeScanner = ({
           })
         : detections;
 
+      const now = Date.now();
+
       if (!assistantBusyRef.current && now - assistantLastRunRef.current > 2500) {
         assistantBusyRef.current = true;
         assistantLastRunRef.current = now;
@@ -361,7 +363,6 @@ const GateModeScanner = ({
 
       // FPS counter
       fpsCounterRef.current.frames++;
-      const now = Date.now();
       if (now - fpsCounterRef.current.lastTime >= 1000) {
         setFps(fpsCounterRef.current.frames);
         fpsCounterRef.current = { frames: 0, lastTime: now };
