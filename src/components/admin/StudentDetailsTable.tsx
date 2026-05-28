@@ -17,6 +17,7 @@ import { CLASSES, SECTIONS, getCategoryLabel } from '@/constants/schoolConfig';
 import StudentIDCardGenerator from './StudentIDCardGenerator';
 import StudentCSVImporter from './StudentCSVImporter';
 import CaptureFaceDialog from './CaptureFaceDialog';
+import { pickPreferredPhotoCandidate, resolveStudentPhotoUrl } from '@/utils/studentPhotoResolver';
 
 interface StudentRow {
   id: string;
@@ -46,12 +47,6 @@ const StudentDetailsTable: React.FC = () => {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const toFullImageUrl = (raw?: string | null) => {
-        if (!raw) return '';
-        if (raw.startsWith('data:') || raw.startsWith('http')) return raw;
-        return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/face-images/${raw}`;
-      };
-
       const [attendanceRes, descriptorsRes, profilesRes] = await Promise.all([
         supabase
           .from('attendance_records')
@@ -78,14 +73,14 @@ const StudentDetailsTable: React.FC = () => {
       const profileImageByUserId = new Map<string, string>();
       (profilesRes.data || []).forEach((profile: any) => {
         if (profile?.user_id && profile?.avatar_url && !profileImageByUserId.has(profile.user_id)) {
-          profileImageByUserId.set(profile.user_id, toFullImageUrl(profile.avatar_url));
+          profileImageByUserId.set(profile.user_id, profile.avatar_url);
         }
       });
 
       const descriptorImageByUserId = new Map<string, string>();
       const descriptorImageByStudentKey = new Map<string, string>();
       (descriptorsRes.data || []).forEach((descriptor: any) => {
-        const descriptorImg = toFullImageUrl(descriptor?.image_url);
+        const descriptorImg = descriptor?.image_url?.toString().trim();
         if (!descriptorImg) return;
         if (descriptor?.user_id && !descriptorImageByUserId.has(descriptor.user_id)) {
           descriptorImageByUserId.set(descriptor.user_id, descriptorImg);
@@ -116,12 +111,13 @@ const StudentDetailsTable: React.FC = () => {
         const key = (canonicalUserId || empKey || r.id) as string;
         if (map.has(key)) return;
 
-        const firstRegistrationImage = toFullImageUrl(r.image_url || meta.firebase_image_url || '');
-        const avatar =
-          (canonicalUserId ? profileImageByUserId.get(canonicalUserId) : '') ||
-          (canonicalUserId ? descriptorImageByUserId.get(canonicalUserId) : '') ||
-          (empKey ? descriptorImageByStudentKey.get(empKey) : '') ||
-          firstRegistrationImage;
+        const avatar = pickPreferredPhotoCandidate(
+          canonicalUserId ? profileImageByUserId.get(canonicalUserId) : '',
+          canonicalUserId ? descriptorImageByUserId.get(canonicalUserId) : '',
+          empKey ? descriptorImageByStudentKey.get(empKey) : '',
+          r.image_url,
+          meta.firebase_image_url,
+        );
 
         map.set(key, {
           id: key,
@@ -140,7 +136,14 @@ const StudentDetailsTable: React.FC = () => {
         });
       });
 
-      setRows(Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name)));
+      const resolvedRows = await Promise.all(
+        Array.from(map.values()).map(async (student) => ({
+          ...student,
+          avatar_url: await resolveStudentPhotoUrl(student.avatar_url),
+        })),
+      );
+
+      setRows(resolvedRows.sort((a, b) => a.name.localeCompare(b.name)));
     } catch (e) {
       console.error('Error loading students:', e);
     } finally {
