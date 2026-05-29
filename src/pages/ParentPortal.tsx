@@ -258,8 +258,8 @@ export default function ParentPortalPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border bg-card/80 px-4 py-3 backdrop-blur-xl">
+    <div className="min-h-screen bg-background bg-[linear-gradient(135deg,hsl(var(--background))_0%,hsl(var(--card))_45%,hsl(var(--accent))_100%)]">
+      <header className="sticky top-0 z-40 border-b border-primary/20 bg-card/80 px-4 py-3 backdrop-blur-xl animate-fade-in">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
           <div className="flex items-center gap-2">
             <Link to="/">
@@ -327,7 +327,7 @@ export default function ParentPortalPage() {
               </Button>
             </div>
 
-            <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-card to-muted/20">
+            <Card className="border-primary/40 bg-gradient-to-r from-primary/15 via-card to-accent/40 shadow-[0_10px_35px_-16px_hsl(var(--primary)/0.9)] animate-enter">
               <CardContent className="p-5">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center">
                   <Avatar className="h-20 w-20 border-2 border-primary/30">
@@ -336,6 +336,14 @@ export default function ParentPortalPage() {
                   </Avatar>
 
                   <div className="flex-1">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <Badge className="border-primary/40 bg-primary/15 text-primary">
+                        <Sparkles className="mr-1 h-3.5 w-3.5" /> Parent Live View
+                      </Badge>
+                      <Badge className="border-primary/40 bg-primary/10 text-primary">
+                        <Flame className="mr-1 h-3.5 w-3.5" /> Streak {summary?.streak ?? 0}
+                      </Badge>
+                    </div>
                     <h2 className="text-2xl font-black text-foreground">{child.name}</h2>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Badge variant="secondary" className="gap-1">
@@ -347,8 +355,22 @@ export default function ParentPortalPage() {
                   </div>
 
                   <div className="text-left md:text-right">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Current Streak</p>
-                    <p className="text-3xl font-black text-primary">{summary?.streak ?? 0}d</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Level</p>
+                    <p className="text-3xl font-black text-primary">{gamified.level}</p>
+                    <p className="text-xs font-semibold text-muted-foreground">{gamified.xpTotal} XP</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-lg border border-primary/30 bg-background/70 p-3">
+                  <div className="mb-2 flex items-center justify-between text-xs">
+                    <span className="font-semibold text-foreground">Level Progress</span>
+                    <span className="text-muted-foreground">{gamified.xpToNext} XP to next level</span>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-700"
+                      style={{ width: `${gamified.progress}%` }}
+                    />
                   </div>
                 </div>
               </CardContent>
