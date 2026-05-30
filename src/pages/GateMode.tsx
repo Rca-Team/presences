@@ -228,7 +228,22 @@ const GateMode = () => {
   }, []);
 
   const handleFaceDetected = useCallback((entry: GateEntry) => {
-    setEntries(prev => [entry, ...prev]);
+    setEntries((prev) => {
+      if (entry.isRecognized && entry.studentId) {
+        const existingIndex = prev.findIndex(
+          (item) => item.isRecognized && item.studentId === entry.studentId,
+        );
+
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          const existing = updated[existingIndex];
+          updated.splice(existingIndex, 1);
+          return [{ ...existing, ...entry, id: existing.id }, ...updated];
+        }
+      }
+
+      return [entry, ...prev];
+    });
     setLastEntry(entry);
 
     if (entry.isRecognized) {
