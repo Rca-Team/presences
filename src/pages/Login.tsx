@@ -129,7 +129,8 @@ const Login = () => {
       });
       if (result?.error) throw result.error;
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const details = getSignInErrorDetails(error);
+      toast({ title: details.title, description: details.description, variant: "destructive" });
     }
   };
 
