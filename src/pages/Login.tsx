@@ -14,6 +14,52 @@ import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
 import { motion } from 'framer-motion';
 
+const getSignInErrorDetails = (error: any) => {
+  const message = (error?.message || '').toLowerCase();
+  const code = (error?.code || '').toLowerCase();
+  const status = Number(error?.status ?? 0);
+
+  if (message.includes('email not confirmed')) {
+    return {
+      title: 'Email not verified',
+      description: 'Please verify your email from your inbox, then try signing in again.',
+    };
+  }
+
+  if (message.includes('invalid login credentials') || message.includes('invalid_grant')) {
+    return {
+      title: 'Incorrect email or password',
+      description: 'Double-check your email and password. If needed, use Forgot Password.',
+    };
+  }
+
+  if (message.includes('signup is disabled')) {
+    return {
+      title: 'Email sign-up is disabled',
+      description: 'Email/password accounts are currently disabled for this app.',
+    };
+  }
+
+  if (status === 429 || code === 'over_request_rate_limit' || message.includes('too many requests')) {
+    return {
+      title: 'Too many attempts',
+      description: 'Please wait a minute and try again.',
+    };
+  }
+
+  if (message.includes('network') || message.includes('failed to fetch')) {
+    return {
+      title: 'Network issue',
+      description: 'Could not reach the authentication service. Check your internet and retry.',
+    };
+  }
+
+  return {
+    title: 'Sign-in failed',
+    description: error?.message || 'Something went wrong while signing you in.',
+  };
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,13 +90,32 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // Recover from stale/corrupt local auth tokens (e.g. bad_jwt / missing sub claim)
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      if (existingSession?.access_token) {
+        const { error: validationError } = await supabase.auth.getUser();
+        if (validationError) {
+          await supabase.auth.signOut({ scope: 'local' });
+        }
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
       if (error) throw error;
+
       toast({ title: "Welcome back!", description: "Signed in to Presences smart automation" });
       navigate(from, { replace: true });
     } catch (error: any) {
-      toast({ title: "Login failed", description: error.message || "Invalid email or password", variant: "destructive" });
+      const details = getSignInErrorDetails(error);
+      console.error('Sign-in error:', {
+        message: error?.message,
+        code: error?.code,
+        status: error?.status,
+      });
+      toast({ title: details.title, description: details.description, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +129,8 @@ const Login = () => {
       });
       if (result?.error) throw result.error;
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const details = getSignInErrorDetails(error);
+      toast({ title: details.title, description: details.description, variant: "destructive" });
     }
   };
 
