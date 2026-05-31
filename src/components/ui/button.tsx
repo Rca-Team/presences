@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-95",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-95 backdrop-blur-xl border border-white/15",
   {
     variants: {
       variant: {
@@ -13,10 +13,10 @@ const buttonVariants = cva(
         destructive:
           "bg-gradient-to-r from-ios-red to-ios-pink text-white shadow-lg shadow-ios-red/30 hover:shadow-xl hover:shadow-ios-red/40 hover:-translate-y-0.5",
         outline:
-          "border-2 border-ios-blue/30 bg-background hover:bg-ios-blue/10 hover:border-ios-blue/50 text-foreground",
+          "border-ios-blue/30 bg-card/55 dark:bg-card/30 hover:bg-ios-blue/10 hover:border-ios-blue/50 text-foreground",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:-translate-y-0.5",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+          "bg-secondary/70 text-secondary-foreground hover:bg-secondary/80 hover:-translate-y-0.5",
+        ghost: "bg-card/30 border-white/10 hover:bg-accent/70 hover:text-accent-foreground",
         link: "text-ios-blue underline-offset-4 hover:underline",
         ios: "bg-gradient-ios-blue text-white shadow-lg shadow-ios-blue/40 hover:shadow-xl hover:shadow-ios-blue/50 hover:-translate-y-1 hover:scale-[1.02]",
         "ios-green": "bg-gradient-ios-green text-white shadow-lg shadow-ios-green/40 hover:shadow-xl hover:shadow-ios-green/50 hover:-translate-y-1 hover:scale-[1.02]",
