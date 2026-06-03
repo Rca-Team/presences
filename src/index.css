@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 220 25% 10%;
+    --background: 36 42% 96%;
+    --foreground: 214 32% 14%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
+    --card: 32 38% 99%;
+    --card-foreground: 214 32% 14%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
+    --popover: 32 38% 99%;
+    --popover-foreground: 214 32% 14%;
 
-    --primary: 212 100% 47%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 172 74% 35%;
+    --primary-foreground: 36 42% 98%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 220 25% 14%;
+    --secondary: 27 44% 91%;
+    --secondary-foreground: 214 28% 20%;
 
-    --muted: 210 20% 94%;
-    --muted-foreground: 220 15% 40%;
+    --muted: 30 36% 89%;
+    --muted-foreground: 214 16% 38%;
 
-    --accent: 210 40% 94%;
-    --accent-foreground: 220 25% 14%;
+    --accent: 344 70% 90%;
+    --accent-foreground: 344 44% 26%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -32,45 +32,45 @@
     --success-foreground: 210 40% 98%;
 
     --warning: 38 96% 54%;
-    --warning-foreground: 220 25% 10%;
+    --warning-foreground: 214 32% 14%;
 
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 212 100% 47%;
+    --border: 30 24% 80%;
+    --input: 30 24% 80%;
+    --ring: 172 74% 35%;
 
     --radius: 0.75rem;
 
-    --gradient-start: rgba(228, 231, 238, 0.8);
-    --gradient-end: rgba(240, 243, 247, 0.8);
+    --gradient-start: rgba(255, 240, 225, 0.88);
+    --gradient-end: rgba(228, 248, 242, 0.82);
 
-    --sidebar-background: 210 20% 98%;
-    --sidebar-foreground: 220 25% 10%;
-    --sidebar-primary: 212 100% 47%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 210 40% 94%;
-    --sidebar-accent-foreground: 220 25% 14%;
-    --sidebar-border: 220 15% 90%;
-    --sidebar-ring: 212 100% 47%;
+    --sidebar-background: 36 42% 96%;
+    --sidebar-foreground: 214 32% 14%;
+    --sidebar-primary: 172 74% 35%;
+    --sidebar-primary-foreground: 36 42% 98%;
+    --sidebar-accent: 344 70% 90%;
+    --sidebar-accent-foreground: 344 44% 26%;
+    --sidebar-border: 30 24% 80%;
+    --sidebar-ring: 172 74% 35%;
 
     /* iOS-inspired vibrant palette */
-    --cyan: 195 100% 50%;
-    --violet: 280 100% 60%;
-    --rose: 350 100% 60%;
-    --amber: 35 100% 55%;
-    --emerald: 155 100% 45%;
-    --indigo: 240 100% 65%;
-    --teal: 175 80% 45%;
-    --fuchsia: 295 90% 60%;
+    --cyan: 188 80% 42%;
+    --violet: 266 72% 60%;
+    --rose: 347 78% 62%;
+    --amber: 37 88% 56%;
+    --emerald: 156 62% 40%;
+    --indigo: 230 70% 55%;
+    --teal: 173 66% 38%;
+    --fuchsia: 307 74% 58%;
     
     /* iOS accent colors */
-    --ios-blue: 211 100% 50%;
-    --ios-green: 142 76% 45%;
-    --ios-orange: 28 100% 55%;
-    --ios-pink: 340 100% 65%;
-    --ios-purple: 280 100% 65%;
-    --ios-red: 0 100% 60%;
-    --ios-yellow: 45 100% 55%;
-    --ios-mint: 168 76% 50%;
+    --ios-blue: 188 80% 42%;
+    --ios-green: 156 62% 40%;
+    --ios-orange: 24 90% 56%;
+    --ios-pink: 347 78% 62%;
+    --ios-purple: 266 72% 60%;
+    --ios-red: 5 84% 56%;
+    --ios-yellow: 43 90% 56%;
+    --ios-mint: 173 66% 38%;
 
     /* School theme colors */
     --school-blue: 212 100% 47%;
@@ -224,20 +224,20 @@
   .premium-glass-app {
     @apply relative min-h-screen;
     background:
-      radial-gradient(1100px 600px at 10% 8%, hsl(var(--ios-mint) / 0.14), transparent 55%),
-      radial-gradient(1200px 700px at 92% 12%, hsl(var(--ios-purple) / 0.18), transparent 58%),
-      radial-gradient(1100px 700px at 50% 92%, hsl(var(--ios-blue) / 0.14), transparent 60%),
-      linear-gradient(160deg, hsl(var(--background)), hsl(var(--background)));
+      radial-gradient(1050px 580px at 8% 6%, hsl(var(--ios-orange) / 0.2), transparent 56%),
+      radial-gradient(1120px 720px at 96% 8%, hsl(var(--ios-mint) / 0.2), transparent 60%),
+      radial-gradient(980px 620px at 48% 96%, hsl(var(--ios-pink) / 0.16), transparent 60%),
+      linear-gradient(155deg, hsl(var(--background)), hsl(var(--secondary) / 0.62));
   }
 
   .premium-glass-main {
     @apply relative rounded-3xl border backdrop-blur-2xl;
-    background: linear-gradient(145deg, hsl(var(--card) / 0.68), hsl(var(--card) / 0.38));
-    border-color: hsl(var(--border) / 0.45);
+    background: linear-gradient(145deg, hsl(var(--card) / 0.82), hsl(var(--card) / 0.48));
+    border-color: hsl(var(--border) / 0.62);
     box-shadow:
-      0 26px 60px -30px hsl(var(--foreground) / 0.35),
-      0 8px 28px -18px hsl(var(--primary) / 0.45),
-      inset 0 1px 0 hsl(var(--primary-foreground) / 0.24);
+      0 28px 64px -34px hsl(var(--foreground) / 0.28),
+      0 10px 26px -18px hsl(var(--ios-mint) / 0.35),
+      inset 0 1px 0 hsl(var(--primary-foreground) / 0.35);
   }
 
   .premium-glass-main::before {
@@ -247,11 +247,11 @@
   }
 
   .premium-glass-navbar {
-    background: linear-gradient(150deg, hsl(var(--card) / 0.72), hsl(var(--card) / 0.36));
-    border-color: hsl(var(--border) / 0.5);
+    background: linear-gradient(150deg, hsl(var(--card) / 0.82), hsl(var(--card) / 0.5));
+    border-color: hsl(var(--border) / 0.64);
     box-shadow:
-      0 18px 42px -26px hsl(var(--foreground) / 0.4),
-      inset 0 1px 0 hsl(var(--primary-foreground) / 0.2);
+      0 20px 46px -30px hsl(var(--foreground) / 0.26),
+      inset 0 1px 0 hsl(var(--primary-foreground) / 0.34);
   }
 
   /* iOS Glass Panel */
