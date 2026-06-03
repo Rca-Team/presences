@@ -155,6 +155,59 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_session_events: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          metadata: Json
+          recognized_at: string
+          recorded_by: string | null
+          session_id: string
+          source: string
+          status: Database["public"]["Enums"]["attendance_event_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          metadata?: Json
+          recognized_at?: string
+          recorded_by?: string | null
+          session_id: string
+          source?: string
+          status?: Database["public"]["Enums"]["attendance_event_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          metadata?: Json
+          recognized_at?: string
+          recorded_by?: string | null
+          session_id?: string
+          source?: string
+          status?: Database["public"]["Enums"]["attendance_event_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_session_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "class_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_settings: {
         Row: {
           created_at: string
@@ -214,6 +267,51 @@ export type Database = {
           section?: string | null
           student_id?: string | null
           student_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      class_sessions: {
+        Row: {
+          class: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          school_day: string
+          section: string
+          started_at: string
+          started_by: string | null
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          class: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          school_day?: string
+          section: string
+          started_at?: string
+          started_by?: string | null
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          school_day?: string
+          section?: string
+          started_at?: string
+          started_by?: string | null
+          subject?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1169,9 +1267,49 @@ export type Database = {
           read_ct: number
         }[]
       }
+      upsert_class_attendance_event: {
+        Args: {
+          p_confidence_score?: number
+          p_idempotency_key?: string
+          p_metadata?: Json
+          p_session_id: string
+          p_source?: string
+          p_status: Database["public"]["Enums"]["attendance_event_status"]
+          p_student_id: string
+        }
+        Returns: {
+          confidence_score: number | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          metadata: Json
+          recognized_at: string
+          recorded_by: string | null
+          session_id: string
+          source: string
+          status: Database["public"]["Enums"]["attendance_event_status"]
+          student_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_session_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "principal" | "teacher" | "user" | "parent"
+      attendance_event_status:
+        | "detected"
+        | "verified"
+        | "corrected"
+        | "present"
+        | "late"
+        | "absent"
+        | "excused"
+        | "unauthorized"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1300,6 +1438,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "principal", "teacher", "user", "parent"],
+      attendance_event_status: [
+        "detected",
+        "verified",
+        "corrected",
+        "present",
+        "late",
+        "absent",
+        "excused",
+        "unauthorized",
+      ],
     },
   },
 } as const

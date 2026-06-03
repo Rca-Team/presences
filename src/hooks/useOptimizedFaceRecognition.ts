@@ -24,6 +24,11 @@ export interface ProcessingOptions {
   enableTracking?: boolean;
   skipFrames?: boolean;
   batchProcessing?: boolean;
+  classScope?: {
+    className?: string;
+    section?: string;
+    subject?: string;
+  };
 }
 
 export const useOptimizedFaceRecognition = () => {
@@ -219,7 +224,15 @@ export const useOptimizedFaceRecognition = () => {
               recognitionResult.employee.id,
               status,
               recognitionResult.confidence,
-              undefined,
+              options.classScope
+                ? {
+                    metadata: {
+                      class: options.classScope.className,
+                      section: options.classScope.section,
+                      subject: options.classScope.subject,
+                    },
+                  }
+                : undefined,
               capturedImageDataUrl,
               'ai-scan'
             );

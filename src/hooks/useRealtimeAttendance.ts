@@ -12,6 +12,13 @@ interface AttendanceUpdate {
   device_info: any;
 }
 
+interface SessionAttendanceUpdate {
+  id: string;
+  status: string;
+  recognized_at: string;
+  metadata: any;
+}
+
 interface UseRealtimeAttendanceOptions {
   categories?: string[];
   onNewAttendance?: (record: AttendanceUpdate) => void;
@@ -90,6 +97,43 @@ export const useRealtimeAttendance = (options: UseRealtimeAttendanceOptions = {}
                 tag: record.id,
               });
             }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'attendance_session_events',
+        },
+        async (payload: any) => {
+          const event = payload.new as SessionAttendanceUpdate;
+          const opts = optionsRef.current;
+
+          if (event.status !== 'present' && event.status !== 'late') return;
+
+          const studentName = event.metadata?.student_name || 'A student';
+          const category = event.metadata?.class || 'Class';
+
+          const syntheticRecord: AttendanceUpdate = {
+            id: event.id,
+            user_id: null,
+            status: event.status,
+            timestamp: event.recognized_at,
+            category,
+            device_info: { metadata: { name: studentName } },
+          };
+
+          setRecentAttendance(prev => [syntheticRecord, ...prev.slice(0, 19)]);
+          opts.onNewAttendance?.(syntheticRecord);
+
+          if (opts.showNotifications) {
+            toast({
+              title: event.status === 'present' ? '✓ Attendance Marked' : '⏰ Late Arrival',
+              description: `${studentName} marked ${event.status} in ${category}`,
+              duration: 5000,
+            });
           }
         }
       )

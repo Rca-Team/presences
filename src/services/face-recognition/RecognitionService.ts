@@ -3,6 +3,7 @@ import { descriptorToString, stringToDescriptor } from './ModelService';
 import { getAttendanceCutoffTime } from '../attendance/AttendanceSettingsService';
 import { getAllTrainedDescriptors } from './ProgressiveTrainingService';
 import { dataUrlToBlob, uploadAttendanceTrainingImage } from './TrainingDataStorageService';
+import { ensureActiveClassSession, upsertClassAttendanceEvent } from '../attendance/ClassSessionService';
 
 interface Employee {
   id: string;
@@ -586,6 +587,40 @@ export async function recordAttendance(
     }
     
     console.log('Attendance recorded successfully:', data);
+
+    const metadata = (fullDeviceInfo?.metadata ?? {}) as Record<string, unknown>;
+    const className = (metadata.class as string | undefined) ?? (metadata.class_name as string | undefined) ?? null;
+    const section = (metadata.section as string | undefined) ?? null;
+
+    if (className && section) {
+      try {
+        const sessionId = await ensureActiveClassSession({
+          className,
+          section,
+          subject: (metadata.subject as string | undefined) ?? null,
+        });
+
+        if (sessionId) {
+          await upsertClassAttendanceEvent({
+            sessionId,
+            studentId: userId,
+            status: normalizedStatus as 'present' | 'late' | 'absent' | 'unauthorized',
+            source: captureMode === 'gate-mode' ? 'gate' : 'scanner',
+            confidenceScore: confidence,
+            idempotencyKey: `${sessionId}:${userId}`,
+            metadata: {
+              attendance_record_id: data.id,
+              class: className,
+              section,
+              student_name: (metadata.name as string | undefined) ?? userName ?? null,
+              capture_mode: captureMode,
+            },
+          });
+        }
+      } catch (sessionErr) {
+        console.error('Class session event upsert failed:', sessionErr);
+      }
+    }
     
     // Auto-send parent notification with captured photo proof (non-blocking)
     import('@/services/notification/AutoNotificationService').then(({ sendAutoParentNotification }) => {

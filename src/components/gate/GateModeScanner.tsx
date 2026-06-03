@@ -16,6 +16,9 @@ interface GateModeScannerProps {
   isActive: boolean;
   onPendingCountChange?: (count: number) => void;
   periodKey?: string;
+  className?: string;
+  section?: string;
+  subject?: string;
   aiEnhancerEnabled?: boolean;
   cutoffHour?: number;
   cutoffMinute?: number;
@@ -41,6 +44,9 @@ const GateModeScanner = ({
   isActive,
   onPendingCountChange,
   periodKey,
+  className,
+  section,
+  subject,
   aiEnhancerEnabled = true,
   cutoffHour = 9,
   cutoffMinute = 0,
@@ -528,7 +534,14 @@ const GateModeScanner = ({
                  studentId,
                  isLateNow ? 'late' : 'present',
                  confidence,
-                 { metadata: { gate_period_key: currentPeriodKey } },
+                  {
+                    metadata: {
+                      gate_period_key: currentPeriodKey,
+                      class: className,
+                      section,
+                      subject,
+                    },
+                  },
                  capturedImageDataUrl,
                  'gate-mode'
                );

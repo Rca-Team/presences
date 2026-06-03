@@ -65,8 +65,41 @@ const TeacherPortal: React.FC = () => {
 
   const loadTodayAttendance = async (cls: ClassAssignment | null) => {
     if (!cls) return;
-    const start = new Date(); start.setHours(0,0,0,0);
-    const { data } = await db
+    const todayDate = new Date().toISOString().slice(0, 10);
+
+    const { data: session } = await db
+      .from('class_sessions')
+      .select('id')
+      .eq('class', cls.class)
+      .eq('section', cls.section)
+      .eq('school_day', todayDate)
+      .eq('is_active', true)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (session?.id) {
+      const { data: events } = await db
+        .from('attendance_session_events')
+        .select('id, status, recognized_at, metadata')
+        .eq('session_id', session.id)
+        .order('recognized_at', { ascending: false })
+        .limit(200);
+
+      setToday(
+        (events || []).map((event: any) => ({
+          id: event.id,
+          student_name: event.metadata?.student_name ?? 'Unknown',
+          status: event.status,
+          timestamp: event.recognized_at,
+        }))
+      );
+      return;
+    }
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const { data: legacy } = await db
       .from('attendance_records')
       .select('id, student_name, status, timestamp')
       .eq('class', cls.class)
@@ -74,7 +107,8 @@ const TeacherPortal: React.FC = () => {
       .gte('timestamp', start.toISOString())
       .order('timestamp', { ascending: false })
       .limit(200);
-    setToday(data || []);
+
+    setToday(legacy || []);
   };
 
   const loadTimetable = async (cls: ClassAssignment | null) => {
@@ -103,6 +137,8 @@ const TeacherPortal: React.FC = () => {
     loadTimetable(activeClass);
     const ch = supabase
       .channel(`teacher-att-${activeClass.class}-${activeClass.section}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_session_events' }, () => loadTodayAttendance(activeClass))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_sessions' }, () => loadTodayAttendance(activeClass))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records', filter: `class=eq.${activeClass.class}` }, () => loadTodayAttendance(activeClass))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -191,7 +227,12 @@ const TeacherPortal: React.FC = () => {
                     <CardDescription>Faces are matched against students registered to your class.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <AttendanceCapture />
+                    <AttendanceCapture
+                      classScope={{
+                        className: activeClass.class,
+                        section: activeClass.section,
+                      }}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -204,7 +245,12 @@ const TeacherPortal: React.FC = () => {
                     <CardDescription>Continuous scanning — ideal for classroom door at start of period.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <GateModeScanner isActive={true} onFaceDetected={() => loadTodayAttendance(activeClass)} />
+                    <GateModeScanner
+                      isActive={true}
+                      onFaceDetected={() => loadTodayAttendance(activeClass)}
+                      className={activeClass.class}
+                      section={activeClass.section}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
