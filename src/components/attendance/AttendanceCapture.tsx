@@ -19,7 +19,17 @@ import * as faceapi from 'face-api.js';
 
 const SKIP_CONFIRMATION_CONFIDENCE_THRESHOLD = 0.5;
 
-const AttendanceCapture = () => {
+interface AttendanceCaptureClassScope {
+  className?: string;
+  section?: string;
+  subject?: string;
+}
+
+interface AttendanceCaptureProps {
+  classScope?: AttendanceCaptureClassScope;
+}
+
+const AttendanceCapture: React.FC<AttendanceCaptureProps> = ({ classScope }) => {
   const { toast } = useToast();
   const webcamRef = useRef<HTMLVideoElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -392,7 +402,8 @@ const AttendanceCapture = () => {
       
       const recognitionResult = await processFace(img, {
         enableMultipleFaces: false,
-        enableTracking: false
+        enableTracking: false,
+        classScope,
       });
       
       if (!recognitionResult) {
