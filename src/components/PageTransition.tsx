@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ReactNode } from 'react';
 
 interface PageTransitionProps {
@@ -58,14 +58,16 @@ const childVariants = {
 };
 
 export const PageTransition = ({ children, className = '' }: PageTransitionProps) => {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
+      variants={prefersReducedMotion ? undefined : pageVariants}
+      initial={prefersReducedMotion ? false : 'initial'}
+      animate={prefersReducedMotion ? undefined : 'animate'}
+      exit={prefersReducedMotion ? undefined : 'exit'}
       className={className}
-      style={{ perspective: 1200, transformStyle: 'preserve-3d' }}
+      style={prefersReducedMotion ? undefined : { perspective: 1200, transformStyle: 'preserve-3d' }}
     >
       {children}
     </motion.div>

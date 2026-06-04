@@ -24,13 +24,16 @@ interface UseRealtimeAttendanceOptions {
   onNewAttendance?: (record: AttendanceUpdate) => void;
   showNotifications?: boolean;
   enablePushNotifications?: boolean;
+  useSessionEventsOnly?: boolean;
 }
 
 export const useRealtimeAttendance = (options: UseRealtimeAttendanceOptions = {}) => {
   const { toast } = useToast();
   const [recentAttendance, setRecentAttendance] = useState<AttendanceUpdate[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [isRealtimeHealthy, setIsRealtimeHealthy] = useState(true);
   const optionsRef = useRef(options);
+  const isConnectedRef = useRef(false);
   optionsRef.current = options;
 
   useEffect(() => {
@@ -41,6 +44,26 @@ export const useRealtimeAttendance = (options: UseRealtimeAttendanceOptions = {}
     if (optionsRef.current.enablePushNotifications) {
       pushNotificationService.registerServiceWorker().catch(console.error);
     }
+
+    const fetchRecentFallback = async () => {
+      const { data } = await supabase
+        .from('attendance_records')
+        .select('id,user_id,status,timestamp,category,device_info')
+        .in('status', ['present', 'late'])
+        .order('timestamp', { ascending: false })
+        .limit(10);
+
+      if (!data || data.length === 0) return;
+
+      setRecentAttendance((prev) => {
+        const seen = new Set(prev.map((r) => r.id));
+        const next = [...prev];
+        for (const row of data) {
+          if (!seen.has(row.id)) next.unshift(row as AttendanceUpdate);
+        }
+        return next.slice(0, 20);
+      });
+    };
 
     const channel = supabase
       .channel('attendance-realtime')
@@ -54,6 +77,10 @@ export const useRealtimeAttendance = (options: UseRealtimeAttendanceOptions = {}
         async (payload: any) => {
           const record = payload.new as AttendanceUpdate;
           const opts = optionsRef.current;
+
+          if (opts.useSessionEventsOnly !== false) {
+            return;
+          }
 
           if (opts.categories && opts.categories.length > 0) {
             if (!record.category || !opts.categories.includes(record.category)) {
@@ -138,10 +165,23 @@ export const useRealtimeAttendance = (options: UseRealtimeAttendanceOptions = {}
         }
       )
       .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED');
+        const connected = status === 'SUBSCRIBED';
+        isConnectedRef.current = connected;
+        setIsConnected(connected);
+        setIsRealtimeHealthy(status !== 'CHANNEL_ERROR' && status !== 'TIMED_OUT');
       });
 
+    const healthCheck = window.setInterval(async () => {
+      if (!isConnectedRef.current) {
+        setIsRealtimeHealthy(false);
+        await fetchRecentFallback();
+      } else {
+        setIsRealtimeHealthy(true);
+      }
+    }, 5000);
+
     return () => {
+      clearInterval(healthCheck);
       supabase.removeChannel(channel);
     };
     // Only run once on mount - options accessed via ref
@@ -154,6 +194,7 @@ export const useRealtimeAttendance = (options: UseRealtimeAttendanceOptions = {}
   return {
     recentAttendance,
     isConnected,
+    isRealtimeHealthy,
     clearRecentAttendance,
   };
 };

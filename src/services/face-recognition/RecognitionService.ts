@@ -50,7 +50,9 @@ interface FaceModelArtifact {
 }
 
 const faceModelCache = new Map<string, { expiresAt: number; model: FaceModelArtifact | null }>();
+const profileNameCache = new Map<string, { expiresAt: number; profile: { display_name?: string | null; username?: string | null; full_name?: string | null; avatar_url?: string | null } | null }>();
 const FACE_MODEL_CACHE_TTL_MS = 3 * 60 * 1000;
+const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
 const STRICT_AUTO_THRESHOLD = 0.99;
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
@@ -229,6 +231,24 @@ function combinedDistance(a: Float32Array, b: Float32Array): number {
   return Math.min(euclideanDistance(a, b), cosineDistance(a, b));
 }
 
+async function getCachedProfile(userId: string) {
+  const cached = profileNameCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached.profile;
+
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('display_name, username, full_name, avatar_url')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  profileNameCache.set(userId, {
+    expiresAt: Date.now() + PROFILE_CACHE_TTL_MS,
+    profile: profileData ?? null,
+  });
+
+  return profileData ?? null;
+}
+
 export async function recognizeFace(faceDescriptor: Float32Array): Promise<RecognitionResult> {
   try {
     console.log('Starting face recognition (improved pipeline)');
@@ -289,11 +309,7 @@ export async function recognizeFace(faceDescriptor: Float32Array): Promise<Recog
         const employeeData = deviceInfo?.metadata;
         
         let avatarUrl = employeeData?.firebase_image_url || '';
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('user_id', bestMatch.userId)
-          .maybeSingle();
+        const profileData = await getCachedProfile(bestMatch.userId);
         
         if (profileData?.avatar_url) {
           avatarUrl = profileData.avatar_url;
@@ -401,11 +417,7 @@ export async function recognizeFace(faceDescriptor: Float32Array): Promise<Recog
 
       let avatarUrl = employeeData.firebase_image_url || '';
       if (legacyBestMatch.user_id && legacyBestMatch.user_id !== 'unknown') {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('user_id', legacyBestMatch.user_id)
-          .maybeSingle();
+        const profileData = await getCachedProfile(legacyBestMatch.user_id);
         
         if (profileData?.avatar_url) {
           avatarUrl = profileData.avatar_url;
@@ -505,11 +517,7 @@ export async function recordAttendance(
     
     let userName = null;
     if (userId && userId !== 'unknown') {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('display_name, username, full_name')
-        .eq('user_id', userId)
-        .maybeSingle();
+      const profileData = await getCachedProfile(userId);
 
       if (profileData) {
         userName = profileData.display_name || profileData.full_name || profileData.username || null;

@@ -48,6 +48,7 @@ const AttendanceCapture: React.FC<AttendanceCaptureProps> = ({ classScope }) => 
   const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
   const [livePreviewImage, setLivePreviewImage] = useState<string | null>(null);
   const [detectedFaces, setDetectedFaces] = useState<any[]>([]);
+  const lastDetectionCountRef = useRef(0);
   const detectionIntervalRef = useRef<number>();
   const previewIntervalRef = useRef<number>();
   const [unrecognizedAlert, setUnrecognizedAlert] = useState<{
@@ -191,7 +192,10 @@ const AttendanceCapture: React.FC<AttendanceCaptureProps> = ({ classScope }) => 
           .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
           .withFaceLandmarks(true);
 
-        setDetectedFaces(detections);
+        if (detections.length !== lastDetectionCountRef.current) {
+          lastDetectionCountRef.current = detections.length;
+          setDetectedFaces(detections);
+        }
 
         // Draw on overlay canvas
         if (overlayCanvasRef.current && detections.length > 0) {

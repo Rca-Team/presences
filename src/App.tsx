@@ -1,26 +1,29 @@
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Helmet, HelmetProvider } from "react-helmet-async";
-import Index from "./pages/Index";
-import Register from "./pages/Register";
-import Attendance from "./pages/Attendance";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import NotFound from "./pages/NotFound";
-import Admin from './pages/Admin';
-import Contact from './pages/Contact';
-import NotificationDemo from './pages/NotificationDemo';
-import Profile from './pages/Profile';
-import Features from './pages/Features';
-import GateMode from './pages/GateMode';
-import ParentPortal from './pages/ParentPortal';
-import Unsubscribe from './pages/Unsubscribe';
-import DataBackup from './pages/DataBackup';
-import FaceModelValidator from './pages/FaceModelValidator';
-import TeacherPortal from './pages/TeacherPortal';
+import { Skeleton } from "@/components/ui/skeleton";
+
+const Index = lazy(() => import("./pages/Index"));
+const Register = lazy(() => import("./pages/Register"));
+const Attendance = lazy(() => import("./pages/Attendance"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Admin = lazy(() => import('./pages/Admin'));
+const Contact = lazy(() => import('./pages/Contact'));
+const NotificationDemo = lazy(() => import('./pages/NotificationDemo'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Features = lazy(() => import('./pages/Features'));
+const GateMode = lazy(() => import('./pages/GateMode'));
+const ParentPortal = lazy(() => import('./pages/ParentPortal'));
+const Unsubscribe = lazy(() => import('./pages/Unsubscribe'));
+const DataBackup = lazy(() => import('./pages/DataBackup'));
+const FaceModelValidator = lazy(() => import('./pages/FaceModelValidator'));
+const TeacherPortal = lazy(() => import('./pages/TeacherPortal'));
 
 import { AttendanceProvider } from './contexts/AttendanceContext';
 import { AnimatePresence } from 'framer-motion';
@@ -33,6 +36,15 @@ import RealtimeNotificationListener from './components/RealtimeNotificationListe
 import AppExperienceLayer from './components/AppExperienceLayer';
 
 const queryClient = new QueryClient();
+
+queryClient.setDefaultOptions({
+  queries: {
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  },
+});
 
 const SITE_URL = "https://presences.dev";
 
@@ -144,9 +156,17 @@ function SeoHead() {
 // This component wraps our routes with AnimatePresence for exit animations
 function AnimatedRoutes() {
   const location = useLocation();
+  const routeFallback = (
+    <div className="min-h-[60vh] px-4 py-6 space-y-3">
+      <Skeleton className="h-10 w-1/2" />
+      <Skeleton className="h-44 w-full" />
+      <Skeleton className="h-44 w-full" />
+    </div>
+  );
   
   return (
     <AnimatePresence mode="wait" initial={false}>
+      <Suspense fallback={routeFallback}>
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
@@ -207,11 +227,21 @@ function AnimatedRoutes() {
         } />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
     </AnimatePresence>
   );
 }
 
 function App() {
+  const [mountNonCritical, setMountNonCritical] = useState(false);
+
+  useEffect(() => {
+    const schedule = window.setTimeout(() => setMountNonCritical(true), 350);
+    return () => {
+      window.clearTimeout(schedule);
+    };
+  }, []);
+
   return (
     <ThemeProvider defaultTheme="dark">
       <AttendanceProvider>
@@ -225,11 +255,15 @@ function App() {
                 <BrowserRouter>
                   <SeoHead />
                   <AnimatedRoutes />
-                  <AppExperienceLayer />
-                  <MobileSidebar />
-                  <PWAInstallPrompt />
-                  <EmergencyAlertListener />
-                  <RealtimeNotificationListener />
+                  {mountNonCritical && (
+                    <>
+                      <AppExperienceLayer />
+                      <MobileSidebar />
+                      <PWAInstallPrompt />
+                      <EmergencyAlertListener />
+                      <RealtimeNotificationListener />
+                    </>
+                  )}
                 </BrowserRouter>
               </div>
             </HelmetProvider>

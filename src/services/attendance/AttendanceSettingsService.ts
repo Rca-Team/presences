@@ -1,6 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+const CUTOFF_CACHE_TTL_MS = 60 * 1000;
+let cutoffTimeCache: { value: string; expiresAt: number } | null = null;
+
 interface AttendanceSetting {
   key: string;
   value: unknown;
@@ -11,6 +14,10 @@ interface AttendanceSetting {
  */
 export const getCutoffTime = async (): Promise<string> => {
   try {
+    if (cutoffTimeCache && cutoffTimeCache.expiresAt > Date.now()) {
+      return cutoffTimeCache.value;
+    }
+
     const { data, error } = await supabase
       .from('attendance_settings')
       .select('*')
@@ -25,9 +32,18 @@ export const getCutoffTime = async (): Promise<string> => {
     if (data && data.value) {
       // Handle the value as a string (since it's stored as TEXT in the database)
       const value = data.value;
-      return typeof value === 'string' ? value : '09:00';
+      const resolved = typeof value === 'string' ? value : '09:00';
+      cutoffTimeCache = {
+        value: resolved,
+        expiresAt: Date.now() + CUTOFF_CACHE_TTL_MS,
+      };
+      return resolved;
     }
 
+    cutoffTimeCache = {
+      value: '09:00',
+      expiresAt: Date.now() + CUTOFF_CACHE_TTL_MS,
+    };
     return '09:00'; // Default cutoff time if no data
   } catch (error) {
     console.error('Error in getCutoffTime:', error);
@@ -73,6 +89,10 @@ export const updateCutoffTime = async (time: string): Promise<boolean> => {
   }
 
   console.log('Cutoff time saved successfully:', time);
+  cutoffTimeCache = {
+    value: time,
+    expiresAt: Date.now() + CUTOFF_CACHE_TTL_MS,
+  };
   return true;
 };
 

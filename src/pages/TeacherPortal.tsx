@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,6 +29,8 @@ const TeacherPortal: React.FC = () => {
   const [today, setToday] = useState<AttRow[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [subs, setSubs] = useState<Substitution[]>([]);
+  const [isRealtimeHealthy, setIsRealtimeHealthy] = useState(true);
+  const isRealtimeHealthyRef = useRef(true);
 
   // Gate authorization
   useEffect(() => {
@@ -137,11 +139,42 @@ const TeacherPortal: React.FC = () => {
     loadTimetable(activeClass);
     const ch = supabase
       .channel(`teacher-att-${activeClass.class}-${activeClass.section}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_session_events' }, () => loadTodayAttendance(activeClass))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_sessions' }, () => loadTodayAttendance(activeClass))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records', filter: `class=eq.${activeClass.class}` }, () => loadTodayAttendance(activeClass))
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'class_sessions',
+          filter: `class=eq.${activeClass.class}`,
+        },
+        () => loadTodayAttendance(activeClass)
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance_records',
+          filter: `class=eq.${activeClass.class}`,
+        },
+        () => loadTodayAttendance(activeClass)
+      )
+      .subscribe((status) => {
+        const healthy = status === 'SUBSCRIBED';
+        isRealtimeHealthyRef.current = healthy;
+        setIsRealtimeHealthy(healthy);
+      });
+
+    const fallbackPoll = window.setInterval(() => {
+      if (!isRealtimeHealthyRef.current) {
+        loadTodayAttendance(activeClass);
+      }
+    }, 12000);
+
+    return () => {
+      supabase.removeChannel(ch);
+      clearInterval(fallbackPoll);
+    };
     // eslint-disable-next-line
   }, [activeClass?.class, activeClass?.section]);
 
@@ -218,6 +251,11 @@ const TeacherPortal: React.FC = () => {
                 <TabsTrigger value="today">Today</TabsTrigger>
                 <TabsTrigger value="timetable"><Calendar className="h-4 w-4 mr-1" />Plan</TabsTrigger>
               </TabsList>
+              <div className="mt-2">
+                <Badge variant={isRealtimeHealthy ? 'default' : 'secondary'}>
+                  {isRealtimeHealthy ? 'Realtime Connected' : 'Realtime Reconnecting'}
+                </Badge>
+              </div>
 
               {/* Take attendance — uses face capture, scoped to teacher's class */}
               <TabsContent value="attendance" className="mt-4">
