@@ -64,6 +64,7 @@ const PrincipalDashboard: React.FC = () => {
 
   const { isConnected } = useRealtimeAttendance({
     showNotifications: true,
+    useSessionEventsOnly: false,
     onNewAttendance: (record) => {
       const name = record.device_info?.metadata?.name || 'Unknown';
       const imageUrl = record.device_info?.metadata?.firebase_image_url || '';
