@@ -137,7 +137,6 @@ const TeacherPortal: React.FC = () => {
     if (!activeClass) return;
     loadTodayAttendance(activeClass);
     loadTimetable(activeClass);
-    const todayDate = new Date().toISOString().slice(0, 10);
     const ch = supabase
       .channel(`teacher-att-${activeClass.class}-${activeClass.section}`)
       .on(
