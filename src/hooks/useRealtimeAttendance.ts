@@ -33,7 +33,6 @@ export const useRealtimeAttendance = (options: UseRealtimeAttendanceOptions = {}
   const [isConnected, setIsConnected] = useState(false);
   const [isRealtimeHealthy, setIsRealtimeHealthy] = useState(true);
   const optionsRef = useRef(options);
-  const lastRealtimeEventAtRef = useRef<number>(Date.now());
   const isConnectedRef = useRef(false);
   optionsRef.current = options;
 
@@ -78,7 +77,6 @@ export const useRealtimeAttendance = (options: UseRealtimeAttendanceOptions = {}
         async (payload: any) => {
           const record = payload.new as AttendanceUpdate;
           const opts = optionsRef.current;
-          lastRealtimeEventAtRef.current = Date.now();
 
           if (opts.useSessionEventsOnly !== false) {
             return;
@@ -139,7 +137,6 @@ export const useRealtimeAttendance = (options: UseRealtimeAttendanceOptions = {}
         async (payload: any) => {
           const event = payload.new as SessionAttendanceUpdate;
           const opts = optionsRef.current;
-          lastRealtimeEventAtRef.current = Date.now();
 
           if (event.status !== 'present' && event.status !== 'late') return;
 
