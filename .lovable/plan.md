@@ -1,4 +1,56 @@
 ## Goal
+Make the platform significantly faster, smoother, and more practical for daily school use by shipping 20 focused improvements across frontend performance, realtime data flow, attendance recognition, and backend reliability.
+
+## Delivery plan (20 changes)
+
+### Phase 1 — Fast wins (UI speed + smoothness)
+1. **Lazy-load heavy routes** (`/attendance`, `/teacher`, `/gate`, `/admin`, `/features`) with route-level code splitting.
+2. **Enable React Query cache defaults** (staleTime/cacheTime/retry tuning) to reduce repeated requests while navigating.
+3. **Limit expensive page animations on low-end/mobile** by honoring reduced-motion and lowering blur/transform intensity.
+4. **Debounce high-frequency scanner UI state updates** in attendance components to avoid frame drops.
+5. **Replace duplicate realtime listeners** where both session and legacy attendance subscriptions run at once.
+6. **Virtualize long attendance lists/feed panels** so only visible rows render.
+7. **Add strict memoization** for reusable dashboard cards and scanner overlays that re-render too often.
+8. **Preload critical model/assets only when entering scan routes**, not globally at app boot.
+
+### Phase 2 — Attendance pipeline performance
+9. **Short-circuit recognition fallback path** so legacy full-table comparisons run only when trained descriptor path truly fails.
+10. **Batch profile/avatar lookups** during recognition to remove per-match query chains.
+11. **Reduce repeated cutoff-time reads** by caching attendance settings for a short TTL client-side.
+12. **Throttle continuous scanner loop adaptively** (dynamic frame interval based on device performance/processing time).
+13. **Stop duplicate attendance writes** by adding stronger client idempotency keys per scan session.
+14. **Trim payload size for realtime events** (store only practical metadata required for teacher views/notifications).
+
+### Phase 3 — Realtime classroom practicality
+15. **Scope realtime channels by class+section+day** to prevent unrelated updates and reduce network chatter.
+16. **Use active-session lifecycle controls** (start/end session explicitly) so teacher views load only current session data.
+17. **Add optimistic local counters** (present/late/absent) with server reconciliation for instant UI response.
+18. **Fallback polling only when realtime disconnects** with exponential backoff (avoid aggressive refetch loops).
+
+### Phase 4 — Backend/query hardening
+19. **Add targeted indexes for session/event hot paths** (class_sessions lookup, attendance_session_events session/time/status patterns).
+20. **Add observability baseline** (latency, recognition success, duplicate block rate, realtime subscription health) and surface in admin diagnostics.
+
+## Implementation order
+1. Phase 1 (weeks 1–2): immediate UX speed improvements with minimal risk.
+2. Phase 2 (weeks 2–3): optimize face recognition + write path.
+3. Phase 3 (weeks 3–4): realtime correctness and classroom ergonomics.
+4. Phase 4 (week 4): backend index/metrics hardening and go-live validation.
+
+## Acceptance criteria
+- Attendance page interactive under **2s** on mobile network.
+- Scanner loop remains visually smooth (no major frame stutter) during continuous mode.
+- Class attendance updates appear in teacher view within **<3s** end-to-end.
+- Duplicate attendance records effectively blocked for same student/session.
+- Realtime disconnect recovery works without manual refresh.
+
+## Technical details
+- **Frontend focus areas:** `App.tsx`, route loading strategy, `PageLayout`, `Attendance.tsx`, scanner/feed components, realtime hooks.
+- **Recognition focus areas:** optimized vs legacy matching path, metadata/profile query reduction, settings cache, adaptive loop timing.
+- **Realtime focus areas:** channel scoping, subscription lifecycle cleanup, practical payload design, offline/reconnect behavior.
+- **Backend focus areas:** attendance session/event query patterns, index coverage, event write idempotency, performance telemetry.
+- **Risk control:** ship each phase behind safe toggles where possible and validate with a pilot class before wider rollout.
+## Goal
 Make the current school platform reliable for **real-time class operations** (attendance, gate flow, teacher visibility, parent notifications, and admin control) with production-grade stability.
 
 ## What already exists (baseline)
