@@ -236,16 +236,9 @@ function App() {
   const [mountNonCritical, setMountNonCritical] = useState(false);
 
   useEffect(() => {
-    const schedule = window.requestIdleCallback
-      ? window.requestIdleCallback(() => setMountNonCritical(true), { timeout: 1200 })
-      : window.setTimeout(() => setMountNonCritical(true), 350);
-
+    const schedule = window.setTimeout(() => setMountNonCritical(true), 350);
     return () => {
-      if (typeof schedule === 'number') {
-        window.clearTimeout(schedule);
-      } else {
-        window.cancelIdleCallback(schedule);
-      }
+      window.clearTimeout(schedule);
     };
   }, []);
 
