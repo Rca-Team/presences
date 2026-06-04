@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import {
   Activity,
-  User,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -29,6 +28,9 @@ interface AttendanceRecord {
 
 const LiveAttendanceFeed: React.FC = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  const visibleRecords = useMemo(() => records.slice(0, visibleCount), [records, visibleCount]);
 
   const getStudentName = (record: AttendanceRecord): string => {
     if (record.device_info?.metadata?.name) {
@@ -119,7 +121,7 @@ const LiveAttendanceFeed: React.FC = () => {
       <ScrollArea className="flex-1">
         <div className="space-y-2">
           <AnimatePresence mode="popLayout">
-            {records.map((record, index) => {
+            {visibleRecords.map((record, index) => {
               const studentName = getStudentName(record);
               const studentImage = getStudentImage(record);
               
@@ -194,6 +196,18 @@ const LiveAttendanceFeed: React.FC = () => {
               <Activity className="w-10 h-10 text-muted-foreground/30 mb-2" />
               <p className="text-xs text-muted-foreground">No attendance records today</p>
               <p className="text-[10px] text-muted-foreground/70">Records will appear here in real-time</p>
+            </div>
+          )}
+
+          {records.length > visibleCount && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((count) => Math.min(count + 10, records.length))}
+                className="w-full rounded-md border border-border bg-background/70 px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Show more
+              </button>
             </div>
           )}
         </div>
