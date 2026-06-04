@@ -169,8 +169,10 @@ const TeacherPortal: React.FC = () => {
       }
     }, 12000);
 
-    return () => { supabase.removeChannel(ch); };
-    clearInterval(fallbackPoll);
+    return () => {
+      supabase.removeChannel(ch);
+      clearInterval(fallbackPoll);
+    };
     // eslint-disable-next-line
   }, [activeClass?.class, activeClass?.section, isRealtimeHealthy]);
 
