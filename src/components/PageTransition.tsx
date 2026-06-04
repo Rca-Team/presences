@@ -62,9 +62,9 @@ export const PageTransition = ({ children, className = '' }: PageTransitionProps
 
   return (
     <motion.div
-      variants={pageVariants}
+      variants={prefersReducedMotion ? undefined : pageVariants}
       initial={prefersReducedMotion ? false : 'initial'}
-      animate="animate"
+      animate={prefersReducedMotion ? undefined : 'animate'}
       exit={prefersReducedMotion ? undefined : 'exit'}
       className={className}
       style={prefersReducedMotion ? undefined : { perspective: 1200, transformStyle: 'preserve-3d' }}
