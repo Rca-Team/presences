@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,6 +30,7 @@ const TeacherPortal: React.FC = () => {
   const [periods, setPeriods] = useState<Period[]>([]);
   const [subs, setSubs] = useState<Substitution[]>([]);
   const [isRealtimeHealthy, setIsRealtimeHealthy] = useState(true);
+  const isRealtimeHealthyRef = useRef(true);
 
   // Gate authorization
   useEffect(() => {
@@ -160,11 +161,13 @@ const TeacherPortal: React.FC = () => {
         () => loadTodayAttendance(activeClass)
       )
       .subscribe((status) => {
-        setIsRealtimeHealthy(status === 'SUBSCRIBED');
+        const healthy = status === 'SUBSCRIBED';
+        isRealtimeHealthyRef.current = healthy;
+        setIsRealtimeHealthy(healthy);
       });
 
     const fallbackPoll = window.setInterval(() => {
-      if (!isRealtimeHealthy) {
+      if (!isRealtimeHealthyRef.current) {
         loadTodayAttendance(activeClass);
       }
     }, 12000);
@@ -174,7 +177,7 @@ const TeacherPortal: React.FC = () => {
       clearInterval(fallbackPoll);
     };
     // eslint-disable-next-line
-  }, [activeClass?.class, activeClass?.section, isRealtimeHealthy]);
+  }, [activeClass?.class, activeClass?.section]);
 
   const acceptSubstitution = async (subId: string) => {
     if (!userId) return;
