@@ -50,7 +50,9 @@ interface FaceModelArtifact {
 }
 
 const faceModelCache = new Map<string, { expiresAt: number; model: FaceModelArtifact | null }>();
+const profileNameCache = new Map<string, { expiresAt: number; profile: { display_name?: string | null; username?: string | null; full_name?: string | null; avatar_url?: string | null } | null }>();
 const FACE_MODEL_CACHE_TTL_MS = 3 * 60 * 1000;
+const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
 const STRICT_AUTO_THRESHOLD = 0.99;
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
@@ -227,6 +229,24 @@ function cosineDistance(a: Float32Array, b: Float32Array): number {
  */
 function combinedDistance(a: Float32Array, b: Float32Array): number {
   return Math.min(euclideanDistance(a, b), cosineDistance(a, b));
+}
+
+async function getCachedProfile(userId: string) {
+  const cached = profileNameCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached.profile;
+
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('display_name, username, full_name, avatar_url')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  profileNameCache.set(userId, {
+    expiresAt: Date.now() + PROFILE_CACHE_TTL_MS,
+    profile: profileData ?? null,
+  });
+
+  return profileData ?? null;
 }
 
 export async function recognizeFace(faceDescriptor: Float32Array): Promise<RecognitionResult> {
