@@ -71,6 +71,7 @@ const GateModeScanner = ({
   const processingRef = useRef(false);
   const cooldownRef = useRef<Map<string, number>>(new Map());
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const detectionIntervalMsRef = useRef(200);
   const fpsCounterRef = useRef({ frames: 0, lastTime: Date.now() });
   const attendanceMarkedRef = useRef<Set<string>>(new Set());
   const recognizedCooldownRef = useRef<Map<string, number>>(new Map());
@@ -221,6 +222,7 @@ const GateModeScanner = ({
 
   // Continuous detection loop
   const detectLoop = useCallback(async () => {
+    const startedAt = performance.now();
     if (processingRef.current || !videoRef.current || videoRef.current.paused) return;
     processingRef.current = true;
 
@@ -584,13 +586,31 @@ const GateModeScanner = ({
     }
 
     processingRef.current = false;
+    const elapsed = performance.now() - startedAt;
+    if (elapsed > 450) detectionIntervalMsRef.current = 420;
+    else if (elapsed > 260) detectionIntervalMsRef.current = 320;
+    else detectionIntervalMsRef.current = 220;
   }, [autoZone, cutoffHour, cutoffMinute, detectionBox, getCurrentPeriodKey, onFaceDetected, syncPendingCount]);
 
   // Detection interval
   useEffect(() => {
     if (!isActive || isLoading) return;
-    intervalRef.current = setInterval(detectLoop, 200);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    let stopped = false;
+
+    const scheduleNext = () => {
+      if (stopped) return;
+      const delay = detectionIntervalMsRef.current;
+      intervalRef.current = setTimeout(async () => {
+        await detectLoop();
+        scheduleNext();
+      }, delay);
+    };
+
+    scheduleNext();
+    return () => {
+      stopped = true;
+      if (intervalRef.current) clearTimeout(intervalRef.current);
+    };
   }, [isActive, isLoading, detectLoop]);
 
   // Clean up old cooldowns & labels
