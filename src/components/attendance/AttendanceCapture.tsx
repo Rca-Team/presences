@@ -10,7 +10,6 @@ import AttendanceResult from './AttendanceResult';
 import UnrecognizedFaceAlert from './UnrecognizedFaceAlert';
 import RecognizedFaceAlert from './RecognizedFaceAlert';
 import ScanConfirmation from './ScanConfirmation';
-import { supabase } from '@/integrations/supabase/client';
 import { loadOptimizedModels } from '@/services/face-recognition/OptimizedModelService';
 import { videoEnhancementService } from '@/services/ai/VideoEnhancementService';
 import { usePhotoEnhancer } from '@/hooks/usePhotoEnhancer';
