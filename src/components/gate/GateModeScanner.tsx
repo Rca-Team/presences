@@ -734,6 +734,18 @@ const GateModeScanner = ({
               <Zap className="h-3 w-3 text-yellow-500" />
               <span className="text-[10px] sm:text-xs font-medium text-foreground">{fps} FPS</span>
             </div>
+            <div className="bg-card/80 backdrop-blur rounded-full px-2 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1">
+              <ShieldCheck className="h-3 w-3 text-emerald-500" />
+              <span className="text-[10px] sm:text-xs font-medium text-foreground">{autoMarkedCount} auto</span>
+            </div>
+            <div className="bg-card/80 backdrop-blur rounded-full px-2 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1">
+              <ShieldAlert className="h-3 w-3 text-rose-500" />
+              <span className="text-[10px] sm:text-xs font-medium text-foreground">{qualityBlockedCount} blocked</span>
+            </div>
+            <div className="bg-card/80 backdrop-blur rounded-full px-2 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1">
+              <Zap className="h-3 w-3 text-cyan-500" />
+              <span className="text-[10px] sm:text-xs font-medium text-foreground">{avgLatencyMs}ms</span>
+            </div>
           </div>
 
           {/* Camera flip button */}
