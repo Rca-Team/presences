@@ -444,6 +444,8 @@ const GateModeScanner = ({
       // Process each detected face (only those inside the detection zone)
       for (const detection of filteredDetections) {
         const descriptorKey = Array.from(detection.descriptor.slice(0, 8)).map(v => v.toFixed(2)).join(',');
+        const livenessDetectionScore = detection.detection.score ?? 0;
+        const currentPeriodKey = getCurrentPeriodKey();
 
         // Cooldown: don't re-process same face within configured anti-spam window
         const lastSeen = cooldownRef.current.get(descriptorKey);
@@ -451,7 +453,24 @@ const GateModeScanner = ({
         cooldownRef.current.set(descriptorKey, now);
 
         try {
+          if (livenessDetectionScore < MIN_LIVENESS_DETECTION_SCORE) {
+            setQualityBlockedCount((prev) => prev + 1);
+            faceLabelsRef.current.set(descriptorKey, {
+              name: 'Low quality / potential spoof',
+              confidence: livenessDetectionScore,
+              recognized: false,
+            });
+            continue;
+          }
+
+          const recognitionStartedAt = performance.now();
           const result = await recognizeFace(detection.descriptor);
+          const recognitionLatency = performance.now() - recognitionStartedAt;
+          perfWindowRef.current.push(recognitionLatency);
+          if (perfWindowRef.current.length > 30) perfWindowRef.current.shift();
+          const avg = perfWindowRef.current.reduce((sum, ms) => sum + ms, 0) / perfWindowRef.current.length;
+          setAvgLatencyMs(Math.round(avg));
+
           const rawRecognized = result?.recognized || false;
           const rawConfidence = result?.confidence || detection.detection.score;
           const isRecognized = rawRecognized && rawConfidence >= MIN_RECOGNITION_CONFIDENCE;
@@ -498,10 +517,19 @@ const GateModeScanner = ({
             return [...filtered, { name: studentName, confidence, recognized: isRecognized, timestamp: now }].slice(-5);
           });
 
-            const currentPeriodKey = getCurrentPeriodKey();
-
             const nowTime = new Date();
             const isLateNow = nowTime.getHours() > cutoffHour || (nowTime.getHours() === cutoffHour && nowTime.getMinutes() >= cutoffMinute);
+
+            let isStableIdentity = false;
+            if (isRecognized && studentId) {
+              const stableKey = `${studentId}:${currentPeriodKey}`;
+              const existingStable = stableHitsRef.current.get(stableKey);
+              const nextHits = existingStable && now - existingStable.lastSeen <= STABILITY_WINDOW_MS
+                ? existingStable.hits + 1
+                : 1;
+              stableHitsRef.current.set(stableKey, { hits: nextHits, lastSeen: now });
+              isStableIdentity = nextHits >= STABILITY_REQUIRED_HITS;
+            }
 
             const entry: GateEntry = {
             id: uuidv4(),
@@ -519,6 +547,8 @@ const GateModeScanner = ({
             isRecognized &&
             studentId &&
             confidence >= MIN_ATTENDANCE_MARK_CONFIDENCE &&
+            livenessDetectionScore >= MIN_LIVENESS_DETECTION_SCORE &&
+            isStableIdentity &&
               !attendanceMarkedRef.current.has(studentId) &&
               !periodMarkedRef.current.has(`${studentId}:${currentPeriodKey}`)
           ) {
@@ -526,6 +556,7 @@ const GateModeScanner = ({
               syncPendingCount();
             attendanceMarkedRef.current.add(studentId);
               periodMarkedRef.current.add(`${studentId}:${currentPeriodKey}`);
+              setAutoMarkedCount((prev) => prev + 1);
             try {
               // Capture the video frame for the notification email
               let capturedImageDataUrl: string | undefined;
