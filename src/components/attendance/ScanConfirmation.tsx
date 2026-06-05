@@ -5,8 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2, RotateCcw, Clock, UserCheck, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
 
 interface ScanConfirmationProps {
   open: boolean;
@@ -17,7 +15,6 @@ interface ScanConfirmationProps {
   confidence: number; // 0..1
   status: 'present' | 'late';
   imageUrl: string; // data URL or http URL of full captured frame
-  attendanceRecordId?: string; // id of the attendance row that was just inserted (for undo)
   autoConfirmSeconds?: number;
   onConfirm: () => void;
   onRetake: () => void;
@@ -32,12 +29,10 @@ const ScanConfirmation: React.FC<ScanConfirmationProps> = ({
   confidence,
   status,
   imageUrl,
-  attendanceRecordId,
   autoConfirmSeconds = 5,
   onConfirm,
   onRetake,
 }) => {
-  const { toast } = useToast();
   const [secondsLeft, setSecondsLeft] = useState(autoConfirmSeconds);
   const [busy, setBusy] = useState(false);
 
@@ -60,26 +55,8 @@ const ScanConfirmation: React.FC<ScanConfirmationProps> = ({
 
   const handleRetake = async () => {
     setBusy(true);
-    try {
-      // Undo: delete the attendance record we just inserted
-      if (attendanceRecordId) {
-        const { error } = await supabase
-          .from('attendance_records')
-          .delete()
-          .eq('id', attendanceRecordId);
-        if (error) throw error;
-        toast({ title: 'Scan discarded', description: 'Attendance record removed. Please try again.' });
-      }
-    } catch (e: any) {
-      toast({
-        title: 'Could not undo',
-        description: e?.message || 'Please remove the record manually from Admin.',
-        variant: 'destructive',
-      });
-    } finally {
-      setBusy(false);
-      onRetake();
-    }
+    setBusy(false);
+    onRetake();
   };
 
   const confidencePct = Math.round(confidence * 100);
