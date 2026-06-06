@@ -31,6 +31,59 @@ void unregisterStaleServiceWorkers();
 // clears old session/auth/cache/face data so the app starts fresh.
 const LOCAL_RESET_MARKER = 'presence_local_reset_v1_done';
 
+const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const payload = parts[1]
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+    const decoded = atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '='));
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+};
+
+const sanitizeSupabaseAuthStorage = () => {
+  try {
+    if (typeof localStorage === 'undefined') return;
+
+    const keysToRemove: string[] = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.includes('-auth-token')) continue;
+
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        keysToRemove.push(key);
+        continue;
+      }
+
+      const accessToken = parsed?.access_token || parsed?.currentSession?.access_token;
+      if (!accessToken || typeof accessToken !== 'string') {
+        keysToRemove.push(key);
+        continue;
+      }
+
+      const payload = decodeJwtPayload(accessToken);
+      if (!payload?.sub) {
+        keysToRemove.push(key);
+      }
+    }
+
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch (e) {
+    console.warn('Auth storage sanitization skipped:', e);
+  }
+};
+
 const resetLocalProjectDataOnce = () => {
   try {
     if (typeof localStorage !== 'undefined' && localStorage.getItem(LOCAL_RESET_MARKER) === '1') {
@@ -64,6 +117,7 @@ const resetLocalProjectDataOnce = () => {
 };
 
 resetLocalProjectDataOnce();
+sanitizeSupabaseAuthStorage();
 
 
 // Improved model loading with retry mechanism
