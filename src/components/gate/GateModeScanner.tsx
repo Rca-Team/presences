@@ -124,6 +124,36 @@ const GateModeScanner = ({
   }, []);
 
   useEffect(() => {
+    const channel = supabase
+      .channel('school-gates-detection-box-live')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'school_gates' },
+        (payload) => {
+          const row = payload.new as { id?: string; detection_box?: DetectionBox | null; is_active?: boolean };
+          if (!row) return;
+
+          if (gateId) {
+            if (row.id === gateId) {
+              setDetectionBox(row.detection_box ?? null);
+            }
+            return;
+          }
+
+          if (row.is_active) {
+            setGateId(row.id ?? null);
+            setDetectionBox(row.detection_box ?? null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [gateId]);
+
+  useEffect(() => {
     if (!videoRef.current) return;
     const computeAutoZone = () => {
       const w = videoRef.current?.videoWidth || 1280;
