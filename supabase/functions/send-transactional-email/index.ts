@@ -63,7 +63,21 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json()
     templateName = body.templateName || body.template_name
-    recipientEmail = body.recipientEmail || body.recipient_email
+    const candidateRecipient = [
+      body.recipientEmail,
+      body.recipient_email,
+      body.parentEmail,
+      body.parent_email,
+      body.email,
+      body.to,
+      body.templateData?.recipientEmail,
+      body.templateData?.recipient_email,
+      body.templateData?.parentEmail,
+      body.templateData?.parent_email,
+      body.templateData?.email,
+      body.templateData?.to,
+    ].find((value) => typeof value === 'string' && value.trim().length > 0)
+    recipientEmail = typeof candidateRecipient === 'string' ? candidateRecipient.trim() : ''
     messageId = crypto.randomUUID()
     idempotencyKey = body.idempotencyKey || body.idempotency_key || messageId
     if (body.templateData && typeof body.templateData === 'object') {
@@ -108,13 +122,26 @@ Deno.serve(async (req) => {
   // Resolve effective recipient: template-level `to` takes precedence over
   // the caller-provided recipientEmail. This allows notification templates
   // to always send to a fixed address (e.g., site owner from env var).
-  const effectiveRecipient = template.to || recipientEmail
+  const fixedTemplateRecipient = typeof template.to === 'string' ? template.to.trim() : ''
+  const effectiveRecipient = fixedTemplateRecipient || recipientEmail
 
   if (!effectiveRecipient) {
     return new Response(
       JSON.stringify({
-        error: 'recipientEmail is required (unless the template defines a fixed recipient)',
+        error: 'Recipient email missing. Provide recipientEmail (or recipient_email / parentEmail / email / to), unless the template defines a fixed recipient.',
       }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    )
+  }
+
+  const normalizedRecipient = effectiveRecipient.toLowerCase()
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(normalizedRecipient)) {
+    return new Response(
+      JSON.stringify({ error: `Invalid recipient email: ${effectiveRecipient}` }),
       {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -129,7 +156,7 @@ Deno.serve(async (req) => {
   const { data: suppressed, error: suppressionError } = await supabase
     .from('suppressed_emails')
     .select('id')
-    .eq('email', effectiveRecipient.toLowerCase())
+    .eq('email', normalizedRecipient)
     .maybeSingle()
 
   if (suppressionError) {
@@ -166,7 +193,7 @@ Deno.serve(async (req) => {
   }
 
   // 3. Get or create unsubscribe token (one token per email address)
-  const normalizedEmail = effectiveRecipient.toLowerCase()
+  const normalizedEmail = normalizedRecipient
   let unsubscribeToken: string
 
   // Check for existing token for this email
