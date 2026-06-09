@@ -88,7 +88,7 @@ const StudentInfoCard: React.FC<StudentInfoCardProps> = ({
         <div className="border-t border-border/50 bg-muted/30 px-3 sm:px-4 py-2 flex items-center justify-between gap-2">
           <div onClick={(e) => e.stopPropagation()}>
             <NotificationService 
-              studentId={selectedFace?.user_id}
+              studentId={selectedFace?.user_id || selectedFace?.recordId}
               studentName={selectedFace?.name}
               attendanceStatus="present"
             />
