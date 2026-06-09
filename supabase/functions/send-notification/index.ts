@@ -5,10 +5,93 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts"
 console.log('Email notification function started');
 
 const resendApiKey = Deno.env.get('RESEND_API_KEY');
+const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
 console.log('Configuration check:', {
-  hasResendKey: !!resendApiKey
+  hasResendKey: !!resendApiKey,
+  hasLovableKey: !!lovableApiKey
 });
+
+async function sendEmailWithResendOrConnector(payload: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  if (!resendApiKey) {
+    return {
+      ok: false,
+      error: 'Email service not configured',
+    };
+  }
+
+  // If secret looks like a direct Resend API key, call Resend directly.
+  if (resendApiKey.startsWith('re_')) {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'School Attendance <noreply@presences.dev>',
+        to: [payload.to],
+        subject: payload.subject,
+        html: payload.html,
+      }),
+    });
+
+    const responseData = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: responseData?.message || 'Failed to send email',
+      };
+    }
+
+    return {
+      ok: true,
+      id: responseData?.id || null,
+    };
+  }
+
+  // Connector key path: use Lovable connector gateway.
+  if (!lovableApiKey) {
+    return {
+      ok: false,
+      error: 'Connector auth key missing',
+    };
+  }
+
+  const response = await fetch('https://connector-gateway.lovable.dev/resend/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${lovableApiKey}`,
+      'X-Connection-Api-Key': resendApiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'School Attendance <noreply@presences.dev>',
+      to: [payload.to],
+      subject: payload.subject,
+      html: payload.html,
+    }),
+  });
+
+  const responseData = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: responseData?.error?.message || responseData?.message || 'Failed to send email',
+    };
+  }
+
+  return {
+    ok: true,
+    id: responseData?.id || null,
+  };
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -254,28 +337,17 @@ serve(async (req) => {
           </html>
         `;
 
-        // Send email via Resend API using verified domain
-        const resendResponse = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: 'School Attendance <noreply@presences.dev>',
-            to: [recipient.email],
-            subject: message.subject,
-            html: htmlContent,
-          }),
+        const sendResult = await sendEmailWithResendOrConnector({
+          to: recipient.email,
+          subject: message.subject,
+          html: htmlContent,
         });
 
-        if (!resendResponse.ok) {
-          const errorData = await resendResponse.json();
-          console.error('Resend error:', errorData);
-          emailError = errorData.message || 'Failed to send email';
+        if (!sendResult.ok) {
+          emailError = sendResult.error;
+          console.error('Resend delivery error:', emailError);
         } else {
-          const emailData = await resendResponse.json();
-          emailId = emailData?.id;
+          emailId = sendResult.id;
           emailSent = true;
           console.log('Email sent successfully:', emailId);
         }
