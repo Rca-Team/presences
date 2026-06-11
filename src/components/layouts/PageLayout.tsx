@@ -38,7 +38,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
       <Navbar />
       
       {/* Animated background orbs */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none neon-liquid-bg">
         <motion.div 
           initial={false}
           animate={{ 
@@ -47,7 +47,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
             y: [0, -20, 0]
           }}
           transition={{ duration: prefersReducedMotion || isMobile ? 0 : 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-20 left-8 w-32 md:w-64 h-32 md:h-64 rounded-full bg-ios-blue/10 blur-[80px]"
+          className="absolute top-20 left-8 w-32 md:w-64 h-32 md:h-64 rounded-full bg-[hsl(var(--neon-orange)/0.20)] blur-[80px]"
         />
         <motion.div 
           initial={false}
@@ -57,7 +57,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
             y: [0, 30, 0]
           }}
           transition={{ duration: prefersReducedMotion || isMobile ? 0 : 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute bottom-20 right-8 w-40 md:w-80 h-40 md:h-80 rounded-full bg-ios-purple/10 blur-[80px]"
+          className="absolute bottom-20 right-8 w-40 md:w-80 h-40 md:h-80 rounded-full bg-[hsl(var(--neon-violet)/0.20)] blur-[80px]"
         />
         <motion.div 
           initial={false}
@@ -66,7 +66,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
             opacity: [0.3, 0.6, 0.3]
           }}
           transition={{ duration: prefersReducedMotion || isMobile ? 0 : 12, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-          className="absolute top-1/2 right-1/4 w-48 md:w-96 h-48 md:h-96 rounded-full bg-ios-pink/8 blur-[100px]"
+          className="absolute top-1/2 right-1/4 w-48 md:w-96 h-48 md:h-96 rounded-full bg-[hsl(var(--neon-pink)/0.16)] blur-[100px]"
         />
         <motion.div 
           initial={false}
@@ -75,7 +75,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
             y: [0, -50, 0]
           }}
           transition={{ duration: prefersReducedMotion || isMobile ? 0 : 20, repeat: Infinity, ease: "easeInOut", delay: 6 }}
-          className="absolute bottom-1/3 left-1/3 w-36 md:w-72 h-36 md:h-72 rounded-full bg-ios-green/8 blur-[80px]"
+          className="absolute bottom-1/3 left-1/3 w-36 md:w-72 h-36 md:h-72 rounded-full bg-[hsl(var(--neon-amber)/0.16)] blur-[80px]"
         />
       </div>
       

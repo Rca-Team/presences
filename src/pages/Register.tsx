@@ -240,9 +240,9 @@ const Register = () => {
 
   return (
     <PageTransition>
-      <div className="min-h-screen flex">
+      <div className="min-h-screen flex neon-liquid-bg">
         {/* Left Panel - Branding */}
-        <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 overflow-hidden">
+        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, hsl(var(--neon-orange)), hsl(var(--neon-pink)), hsl(var(--neon-violet)))' }}>
           <div className="absolute inset-0">
             <div className="absolute top-0 left-0 w-full h-full opacity-10" style={{
               backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
@@ -287,16 +287,16 @@ const Register = () => {
         </div>
 
         {/* Right Panel - Form */}
-        <div className="flex-1 flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-white dark:from-slate-950 dark:via-blue-950/30 dark:to-slate-900 overflow-y-auto">
-          <div className="lg:hidden p-4 border-b border-blue-100 dark:border-blue-900/50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+        <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+          <div className="lg:hidden p-4 border-b border-border/70 liquid-glass-surface">
             <Link to="/"><Logo /></Link>
           </div>
           <div className="flex-1 flex flex-col justify-center px-4 sm:px-8 lg:px-12 xl:px-16 py-8">
             <div className="w-full max-w-lg mx-auto">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
-                  <Scan className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Face Registration</span>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full liquid-glass-surface mb-4">
+                  <Scan className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-primary">Face Registration</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-bold">Create your profile</h2>
                 <p className="mt-2 text-muted-foreground">Register with a guided 3D face scan</p>

@@ -5,16 +5,16 @@ import Logo from './Logo';
 
 const Footer = () => {
   return (
-    <footer className="py-12 px-6 border-t border-border bg-secondary/50">
+    <footer className="py-12 px-6 border-t border-border/70 bg-transparent">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-        <div className="space-y-4">
+        <div className="space-y-4 liquid-glass-surface liquid-glass-highlight p-5">
           <Logo />
           <p className="text-sm text-muted-foreground max-w-xs">
             Streamline attendance management with advanced facial recognition technology.
           </p>
         </div>
         
-        <div>
+        <div className="liquid-glass-surface liquid-glass-highlight p-5">
           <h4 className="font-medium text-sm mb-4">Product</h4>
           <ul className="space-y-2">
             {['Features', 'Security', 'Pricing', 'Documentation'].map((item) => (
@@ -27,7 +27,7 @@ const Footer = () => {
           </ul>
         </div>
         
-        <div>
+        <div className="liquid-glass-surface liquid-glass-highlight p-5">
           <h4 className="font-medium text-sm mb-4">Company</h4>
           <ul className="space-y-2">
             {['About', 'Careers', 'Blog', 'Contact'].map((item) => (
@@ -40,7 +40,7 @@ const Footer = () => {
           </ul>
         </div>
         
-        <div>
+        <div className="liquid-glass-surface liquid-glass-highlight p-5">
           <h4 className="font-medium text-sm mb-4">Legal</h4>
           <ul className="space-y-2">
             {['Terms', 'Privacy', 'Cookies', 'Licenses'].map((item) => (
@@ -54,7 +54,7 @@ const Footer = () => {
         </div>
       </div>
       
-      <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-3">
+      <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-border/70 flex flex-col md:flex-row justify-between items-center gap-3">
         <div className="text-sm text-muted-foreground text-center md:text-left space-y-1">
           <p>© {new Date().getFullYear()} Presence. All rights reserved.</p>
           <p>

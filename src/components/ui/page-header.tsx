@@ -18,11 +18,11 @@ export function PageHeader({
   icon
 }: PageHeaderProps) {
   return (
-    <div className={cn("mb-8", className)}>
+    <div className={cn("mb-8 liquid-glass-surface liquid-glass-highlight p-5 md:p-7", className)}>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-3">
           {icon && (
-            <div className="hidden sm:flex h-12 w-12 rounded-xl items-center justify-center bg-card shadow-sm">
+            <div className="hidden sm:flex h-12 w-12 rounded-xl items-center justify-center bg-card/70 border border-border/60 shadow-sm">
               {icon}
             </div>
           )}

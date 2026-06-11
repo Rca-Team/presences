@@ -68,7 +68,7 @@ const Navbar = () => {
         
         {/* Desktop Navigation - Hidden on Mobile */}
         <LayoutGroup>
-          <nav className="hidden md:flex items-center gap-1 animate-fade-in bg-muted/50 backdrop-blur-xl rounded-full p-1.5 border border-border/50">
+          <nav className="hidden md:flex items-center gap-1 animate-fade-in liquid-glass-surface liquid-glass-highlight rounded-full p-1.5">
             {[
               { text: 'Home', path: '/', show: true },
               { text: 'Parent Portal', path: '/parent', show: !isAuthenticated },
@@ -90,9 +90,13 @@ const Navbar = () => {
                 style={{ transition: 'color 0.3s ease' }}
               >
                 {isActive(item.path) && (
-                  <motion.div
+                    <motion.div
                     layoutId="navbar-active-pill"
-                    className="absolute inset-0 rounded-full bg-gradient-to-r from-[#e84393] to-[#6c5ce7] shadow-lg shadow-[#6c5ce7]/35"
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        background: 'linear-gradient(120deg, hsl(var(--neon-orange)), hsl(var(--neon-pink)), hsl(var(--neon-violet)))',
+                        boxShadow: '0 8px 24px hsl(var(--neon-violet) / 0.35)'
+                      }}
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -110,7 +114,7 @@ const Navbar = () => {
             pressed={theme === 'dark'} 
             onPressedChange={toggleTheme}
             aria-label="Toggle theme"
-            className="relative w-11 h-11 rounded-full bg-muted/50 hover:bg-accent backdrop-blur-xl border border-border/50 hover:scale-110 active:scale-95"
+            className="relative w-11 h-11 rounded-full liquid-glass-surface hover:bg-accent/70 hover:scale-110 active:scale-95"
             style={{ transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
           >
             {theme === 'dark' ? (
@@ -129,7 +133,14 @@ const Navbar = () => {
                 </Button>
               </Link>
               <Link to="/signup">
-                <Button size="sm" className="rounded-full bg-gradient-to-r from-[#e84393] to-[#6c5ce7] px-5 text-white shadow-lg shadow-[#6c5ce7]/35 hover:brightness-110">
+                <Button
+                  size="sm"
+                  className="rounded-full px-5 text-white hover:brightness-110"
+                  style={{
+                    background: 'linear-gradient(120deg, hsl(var(--neon-orange)), hsl(var(--neon-pink)), hsl(var(--neon-violet)))',
+                    boxShadow: '0 10px 26px hsl(var(--neon-violet) / 0.34)'
+                  }}
+                >
                   Get Started
                 </Button>
               </Link>
