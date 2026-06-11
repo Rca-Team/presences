@@ -87,7 +87,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background relative overflow-hidden flex">
+    <div className="min-h-[100dvh] bg-background relative overflow-hidden flex neon-liquid-bg">
       {/* Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 8, repeat: Infinity }}
@@ -148,7 +148,7 @@ const Signup = () => {
             </p>
           </div>
 
-          <Card className="p-5 sm:p-7 space-y-4 bg-card/80 backdrop-blur-xl border-border/50 shadow-xl rounded-2xl">
+          <Card className="p-5 sm:p-7 space-y-4 liquid-glass-surface liquid-glass-highlight border-border/70 shadow-xl rounded-2xl">
             <form onSubmit={handleSubmit} className="space-y-3.5">
               <div className="space-y-1.5">
                 <Label htmlFor="name" className="text-sm flex items-center gap-1.5">
