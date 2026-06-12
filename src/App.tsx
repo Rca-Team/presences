@@ -28,7 +28,6 @@ const TeacherPortal = lazy(() => import('./pages/TeacherPortal'));
 import { AttendanceProvider } from './contexts/AttendanceContext';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from './hooks/use-theme';
-import MobileSidebar from "./components/MobileSidebar";
 import MobileAppShell from "./components/mobile/MobileAppShell";
 import { ProtectedRoute } from './components/ProtectedRoute';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
