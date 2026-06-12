@@ -5,7 +5,6 @@ import Navbar from '../Navbar';
 import Footer from '../Footer';
 import MobileSidebar from '../MobileSidebar';
 import ContactBanner from '../ContactBanner';
-import MobileAppShell from '../mobile/MobileAppShell';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -97,7 +96,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
           className
         )}
       >
-        {isMobile ? <MobileAppShell>{children}</MobileAppShell> : children}
+        {children}
       </motion.main>
       
       {!isMobile && <ContactBanner />}
