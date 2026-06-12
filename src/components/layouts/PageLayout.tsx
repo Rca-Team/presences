@@ -5,6 +5,7 @@ import Navbar from '../Navbar';
 import Footer from '../Footer';
 import MobileSidebar from '../MobileSidebar';
 import ContactBanner from '../ContactBanner';
+import MobileAppShell from '../mobile/MobileAppShell';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -35,7 +36,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-hidden">
-      <Navbar />
+      {!isMobile && <Navbar />}
       
       {/* Animated background orbs */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none neon-liquid-bg">
@@ -92,15 +93,16 @@ const PageLayout: React.FC<PageLayoutProps> = ({
         className={cn(
           "flex-1 pt-20 md:pt-28 pb-8 md:pb-12 px-4 md:px-6 lg:px-8 premium-glass-main",
           fullWidth ? "" : "max-w-7xl mx-auto w-full",
+          isMobile && "pt-0 px-0 pb-0 rounded-none border-0 bg-transparent shadow-none backdrop-blur-none",
           className
         )}
       >
-        {children}
+        {isMobile ? <MobileAppShell>{children}</MobileAppShell> : children}
       </motion.main>
       
-      <ContactBanner />
-      {!noFooter && <Footer />}
-      <MobileSidebar />
+      {!isMobile && <ContactBanner />}
+      {!isMobile && !noFooter && <Footer />}
+      {!isMobile && <MobileSidebar />}
     </div>
   );
 };
