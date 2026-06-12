@@ -245,6 +245,20 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!mountNonCritical) return;
+
+    const prefetchTimer = window.setTimeout(() => {
+      void import('./pages/Attendance');
+      void import('./pages/GateMode');
+      void import('./pages/Admin');
+      void import('./components/gate/GateModeScanner');
+      void import('./components/attendance/FuturisticFaceScanner');
+    }, 500);
+
+    return () => window.clearTimeout(prefetchTimer);
+  }, [mountNonCritical]);
+
+  useEffect(() => {
     const splashSeen = sessionStorage.getItem('presence:splash-seen');
     if (splashSeen) {
       setShowSplash(false);
