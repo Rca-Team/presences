@@ -52,8 +52,8 @@ const MobileAppShell: React.FC<MobileAppShellProps> = ({ children }) => {
   if (!isMobile) return <>{children}</>;
 
   return (
-    <div className="min-h-[100dvh]">
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl safe-area-top">
+    <div className="min-h-[100dvh] native-app-shell">
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-2xl safe-area-top native-app-chrome">
         <div className="flex h-14 items-center justify-between px-4">
           <p className="text-sm font-semibold tracking-tight text-muted-foreground">Presences Mobile</p>
           <h1 className="text-base font-semibold tracking-tight text-foreground">
@@ -66,8 +66,11 @@ const MobileAppShell: React.FC<MobileAppShellProps> = ({ children }) => {
         {children}
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-card/80 backdrop-blur-2xl safe-area-bottom safe-area-left safe-area-right">
-        <div className="grid grid-cols-5 gap-1 px-2 py-2">
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-card/85 backdrop-blur-2xl safe-area-bottom safe-area-left safe-area-right native-app-chrome">
+        <div
+          className="grid gap-1 px-2 py-2"
+          style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+        >
           {tabs.map((tab) => {
             const active = location.pathname === tab.to;
 
