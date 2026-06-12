@@ -34,6 +34,7 @@ import PWAInstallPrompt from './components/PWAInstallPrompt';
 import EmergencyAlertListener from './components/EmergencyAlertListener';
 import RealtimeNotificationListener from './components/RealtimeNotificationListener';
 import AppExperienceLayer from './components/AppExperienceLayer';
+import SplashAnimation from './components/SplashAnimation';
 
 const queryClient = new QueryClient();
 
@@ -234,6 +235,7 @@ function AnimatedRoutes() {
 
 function App() {
   const [mountNonCritical, setMountNonCritical] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     const schedule = window.setTimeout(() => setMountNonCritical(true), 350);
@@ -241,6 +243,32 @@ function App() {
       window.clearTimeout(schedule);
     };
   }, []);
+
+  useEffect(() => {
+    if (!mountNonCritical) return;
+
+    const prefetchTimer = window.setTimeout(() => {
+      void import('./pages/Attendance');
+      void import('./pages/GateMode');
+      void import('./pages/Admin');
+      void import('./components/gate/GateModeScanner');
+      void import('./components/attendance/FuturisticFaceScanner');
+    }, 500);
+
+    return () => window.clearTimeout(prefetchTimer);
+  }, [mountNonCritical]);
+
+  useEffect(() => {
+    const splashSeen = sessionStorage.getItem('presence:splash-seen');
+    if (splashSeen) {
+      setShowSplash(false);
+    }
+  }, []);
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem('presence:splash-seen', '1');
+    setShowSplash(false);
+  };
 
   return (
     <ThemeProvider defaultTheme="dark">
@@ -253,16 +281,22 @@ function App() {
             <HelmetProvider>
               <div className="premium-glass-app">
                 <BrowserRouter>
-                  <MobileAppShell>
-                    <SeoHead />
-                    <AnimatedRoutes />
-                  </MobileAppShell>
-                  {mountNonCritical && (
+                  {showSplash ? (
+                    <SplashAnimation onComplete={handleSplashComplete} duration={2200} />
+                  ) : (
                     <>
-                      <AppExperienceLayer />
-                      <PWAInstallPrompt />
-                      <EmergencyAlertListener />
-                      <RealtimeNotificationListener />
+                      <MobileAppShell>
+                        <SeoHead />
+                        <AnimatedRoutes />
+                      </MobileAppShell>
+                      {mountNonCritical && (
+                        <>
+                          <AppExperienceLayer />
+                          <PWAInstallPrompt />
+                          <EmergencyAlertListener />
+                          <RealtimeNotificationListener />
+                        </>
+                      )}
                     </>
                   )}
                 </BrowserRouter>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import PageLayout from '@/components/layouts/PageLayout';
 import PageTransition from '@/components/PageTransition';
@@ -19,6 +19,8 @@ const Attendance = () => {
   const [attendanceMethod, setAttendanceMethod] = useState<'face' | 'qr'>('face');
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const prefersReducedMotion = useReducedMotion();
+  const minimizeMotion = isMobile || prefersReducedMotion;
 
   const tabConfig = [
     { value: 'single', label: 'AI Scanner', shortLabel: 'Scan', icon: Scan },
@@ -38,18 +40,33 @@ const Attendance = () => {
       <PageLayout className="min-h-[100dvh] bg-background">
         {/* Soft animated background */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <motion.div
-            animate={{ scale: [1, 1.3, 1], opacity: [0.12, 0.25, 0.12] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute -top-20 -right-20 w-60 sm:w-[28rem] h-60 sm:h-[28rem] rounded-full blur-[100px]"
-            style={{ background: 'hsl(var(--ios-blue) / 0.2)' }}
-          />
-          <motion.div
-            animate={{ scale: [1.2, 1, 1.2], opacity: [0.1, 0.2, 0.1] }}
-            transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-            className="absolute -bottom-20 -left-20 w-60 sm:w-[28rem] h-60 sm:h-[28rem] rounded-full blur-[100px]"
-            style={{ background: 'hsl(var(--ios-purple) / 0.15)' }}
-          />
+          {minimizeMotion ? (
+            <>
+              <div
+                className="absolute -top-20 -right-20 w-60 sm:w-[28rem] h-60 sm:h-[28rem] rounded-full blur-[100px]"
+                style={{ background: 'hsl(var(--ios-blue) / 0.16)' }}
+              />
+              <div
+                className="absolute -bottom-20 -left-20 w-60 sm:w-[28rem] h-60 sm:h-[28rem] rounded-full blur-[100px]"
+                style={{ background: 'hsl(var(--ios-purple) / 0.14)' }}
+              />
+            </>
+          ) : (
+            <>
+              <motion.div
+                animate={{ scale: [1, 1.3, 1], opacity: [0.12, 0.25, 0.12] }}
+                transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute -top-20 -right-20 w-60 sm:w-[28rem] h-60 sm:h-[28rem] rounded-full blur-[100px]"
+                style={{ background: 'hsl(var(--ios-blue) / 0.2)' }}
+              />
+              <motion.div
+                animate={{ scale: [1.2, 1, 1.2], opacity: [0.1, 0.2, 0.1] }}
+                transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+                className="absolute -bottom-20 -left-20 w-60 sm:w-[28rem] h-60 sm:h-[28rem] rounded-full blur-[100px]"
+                style={{ background: 'hsl(var(--ios-purple) / 0.15)' }}
+              />
+            </>
+          )}
         </div>
 
         <div className="relative px-4 sm:px-4 md:px-6 py-4 sm:py-8 max-w-7xl mx-auto">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageLayout from '@/components/layouts/PageLayout';
 import PageTransition from '@/components/PageTransition';
@@ -71,6 +71,7 @@ const Admin = () => {
   const [availableFaces, setAvailableFaces] = useState<{id: string; user_id?: string; name: string; employee_id: string;}[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const refreshTimerRef = useRef<number | null>(null);
   const [stats, setStats] = useState({
     totalFaces: 0,
     todayAttendance: 0,
@@ -84,7 +85,7 @@ const Admin = () => {
     }
   }, [isRoleLoading, isTeacher, isAdminOrPrincipal, activeTab]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!isAdminOrPrincipal) return;
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -195,7 +196,18 @@ const Admin = () => {
     } catch (error) {
       console.error('Error fetching data:', error);
     }
-  };
+  }, [isAdminOrPrincipal]);
+
+  const queueRefresh = useCallback(() => {
+    if (refreshTimerRef.current) {
+      window.clearTimeout(refreshTimerRef.current);
+    }
+
+    refreshTimerRef.current = window.setTimeout(() => {
+      fetchData();
+      refreshTimerRef.current = null;
+    }, 300);
+  }, [fetchData]);
 
   useEffect(() => {
     fetchData();
@@ -204,17 +216,23 @@ const Admin = () => {
     on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, () => {
       setAttendanceUpdated(true);
       haptic('medium');
-      setTimeout(() => fetchData(), 500);
+      queueRefresh();
     }).
     on('postgres_changes', { event: '*', schema: 'public', table: 'gate_entries' }, () => {
       setAttendanceUpdated(true);
       haptic('medium');
-      setTimeout(() => fetchData(), 500);
+      queueRefresh();
     }).
-    on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => fetchData()).
+    on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => queueRefresh()).
     subscribe();
-    return () => {supabase.removeChannel(channel);};
-  }, [isAdminOrPrincipal]);
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData, haptic, queueRefresh]);
 
   useEffect(() => {
     if (attendanceUpdated) {

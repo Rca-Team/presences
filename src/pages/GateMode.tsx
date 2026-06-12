@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Shield, X, Settings, Volume2, VolumeX, Maximize, Minimize,
@@ -110,12 +110,12 @@ const GateMode = () => {
   // Fetch baseline settings and live stats
   useEffect(() => {
     const fetchCutoff = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('attendance_settings')
         .select('value')
         .eq('key', 'cutoff_time')
         .maybeSingle();
-      if (data?.value) {
+      if (!error && data?.value) {
         const parts = data.value.split(':');
         setCutoffHour(parseInt(parts[0], 10) || 9);
         setCutoffMinute(parseInt(parts[1], 10) || 0);
@@ -125,10 +125,12 @@ const GateMode = () => {
     const fetchActivePeriod = async () => {
       const now = new Date();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('period_timings')
         .select('period_name, start_time, end_time')
         .order('start_time', { ascending: true });
+
+      if (error) return;
 
       const current = (data || []).find((period) => {
         const [sh, sm] = String(period.start_time || '00:00:00').split(':').map(Number);
@@ -143,9 +145,7 @@ const GateMode = () => {
       }
     };
 
-    fetchGateStats();
-    fetchCutoff();
-    fetchActivePeriod();
+    void Promise.all([fetchGateStats(), fetchCutoff(), fetchActivePeriod()]);
 
     const interval = setInterval(fetchGateStats, 15000);
     return () => clearInterval(interval);
@@ -298,9 +298,13 @@ const GateMode = () => {
     return <GateModeSetup onStart={startSession} onCancel={() => navigate('/admin')} />;
   }
 
-  const recognizedCount = entries.filter(e => e.isRecognized).length;
-  const unknownCount = entries.filter(e => !e.isRecognized).length;
-  const uniqueStudents = new Set(entries.filter(e => e.studentId).map(e => e.studentId)).size;
+  const { recognizedCount, unknownCount, uniqueStudents } = useMemo(() => {
+    const recognized = entries.filter((e) => e.isRecognized).length;
+    const unknown = entries.length - recognized;
+    const unique = new Set(entries.filter((e) => e.studentId).map((e) => e.studentId)).size;
+
+    return { recognizedCount: recognized, unknownCount: unknown, uniqueStudents: unique };
+  }, [entries]);
 
   return (
     <div ref={containerRef} className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
