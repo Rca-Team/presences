@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, ScanLine, UserPlus, ShieldCheck, UserCircle } from "lucide-react";
+import { Home, ScanLine, UserPlus, ShieldCheck, UserCircle, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
+import Logo from "@/components/Logo";
 
 type MobileAppShellProps = {
   children: React.ReactNode;
@@ -25,7 +26,7 @@ const routeTitles: Record<string, string> = {
 const MobileAppShell: React.FC<MobileAppShellProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const location = useLocation();
-  const { isAdminOrPrincipal, isTeacher } = useUserRole();
+  const { isAdminOrPrincipal, isTeacher, isLoading: isRoleLoading } = useUserRole();
   const [isSignedIn, setIsSignedIn] = useState(false);
 
   useEffect(() => {
@@ -39,15 +40,17 @@ const MobileAppShell: React.FC<MobileAppShellProps> = ({ children }) => {
 
   const tabs = useMemo(() => {
     const canUseGate = isAdminOrPrincipal || isTeacher;
+    const canUseAdmin = canUseGate || (isSignedIn && isRoleLoading);
 
     return [
       { key: "home", label: "Home", to: "/", icon: Home, show: true },
       { key: "register", label: "Register", to: "/register", icon: UserPlus, show: isSignedIn },
       { key: "attendance", label: "Attend", to: "/attendance", icon: ScanLine, show: isSignedIn },
       { key: "gate", label: "Gate", to: "/gate", icon: ShieldCheck, show: canUseGate },
+      { key: "admin", label: "Admin", to: "/admin", icon: LayoutDashboard, show: canUseAdmin },
       { key: "profile", label: isSignedIn ? "Profile" : "Login", to: isSignedIn ? "/profile" : "/login", icon: UserCircle, show: true },
     ].filter((item) => item.show);
-  }, [isAdminOrPrincipal, isSignedIn, isTeacher]);
+  }, [isAdminOrPrincipal, isRoleLoading, isSignedIn, isTeacher]);
 
   if (!isMobile) return <>{children}</>;
 
@@ -55,7 +58,7 @@ const MobileAppShell: React.FC<MobileAppShellProps> = ({ children }) => {
     <div className="min-h-[100dvh] native-app-shell">
       <header className="fixed inset-x-0 top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-2xl safe-area-top native-app-chrome">
         <div className="flex h-14 items-center justify-between px-4">
-          <p className="text-sm font-semibold tracking-tight text-muted-foreground">Presences Mobile</p>
+          <Logo size="sm" className="gap-1.5 [&>div>span:last-child]:hidden [&>div>span:first-child]:text-sm [&>img]:h-7 [&>img]:w-7" />
           <h1 className="text-base font-semibold tracking-tight text-foreground">
             {routeTitles[location.pathname] ?? "Workspace"}
           </h1>
