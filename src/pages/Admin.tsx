@@ -547,8 +547,8 @@ const Admin = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.15 }}>
-                    
-                    {renderContent()}
+
+                    {isDataLoading ? <AdminContentSkeleton /> : renderContent()}
                   </motion.div>
                 </AnimatePresence>
               </div>
