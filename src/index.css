@@ -235,6 +235,32 @@
   @apply bg-muted-foreground/50;
 }
 
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.premium-skeleton {
+  @apply relative overflow-hidden rounded-xl border border-border/60 bg-card/70;
+}
+
+.premium-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    hsl(var(--foreground) / 0.12) 45%,
+    transparent 100%
+  );
+  animation: shimmer-slide 1.2s ease-in-out infinite;
+}
+
 @layer components {
   .premium-glass-app {
     @apply relative min-h-screen;
