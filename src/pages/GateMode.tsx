@@ -309,7 +309,7 @@ const GateMode = () => {
   }, [sessionId, entries, navigate]);
 
   if (isSetup) {
-    return <GateModeSetup onStart={startSession} onCancel={() => navigate('/admin')} />;
+    return <GateModeSetup onStart={startSession} onCancel={() => navigate('/admin')} isStarting={isStartingSession} />;
   }
 
   const { recognizedCount, unknownCount, uniqueStudents } = useMemo(() => {
