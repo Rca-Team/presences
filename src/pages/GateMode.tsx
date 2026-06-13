@@ -308,10 +308,6 @@ const GateMode = () => {
     navigate('/admin');
   }, [sessionId, entries, navigate]);
 
-  if (isSetup) {
-    return <GateModeSetup onStart={startSession} onCancel={() => navigate('/admin')} isStarting={isStartingSession} />;
-  }
-
   const { recognizedCount, unknownCount, uniqueStudents } = useMemo(() => {
     const recognized = entries.filter((e) => e.isRecognized).length;
     const unknown = entries.length - recognized;
@@ -319,6 +315,10 @@ const GateMode = () => {
 
     return { recognizedCount: recognized, unknownCount: unknown, uniqueStudents: unique };
   }, [entries]);
+
+  if (isSetup) {
+    return <GateModeSetup onStart={startSession} onCancel={() => navigate('/admin')} isStarting={isStartingSession} />;
+  }
 
   return (
     <div ref={containerRef} className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
