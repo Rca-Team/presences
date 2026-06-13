@@ -54,6 +54,7 @@ const GateMode = () => {
   const [cutoffMinute, setCutoffMinute] = useState(0);
   const [activePeriodKey, setActivePeriodKey] = useState<string>(() => `period-${new Date().toISOString().slice(0, 10)}-default`);
   const [aiEnhancerEnabled, setAiEnhancerEnabled] = useState(true);
+  const [isStartingSession, setIsStartingSession] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -205,14 +206,24 @@ const GateMode = () => {
   }, [soundEnabled]);
 
   const startSession = useCallback(async (selectedGate: string) => {
+    if (isStartingSession) return;
+
+    setIsStartingSession(true);
     setGateName(selectedGate);
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionUser = sessionData.session?.user;
+
+      if (!sessionUser?.id) {
+        throw new Error('You are not signed in. Please sign in again and retry Gate Mode.');
+      }
+
       const { data, error } = await supabase
         .from('gate_sessions')
         .insert({
           gate_name: selectedGate,
-          started_by: user?.id,
+          started_by: sessionUser.id,
           device_info: { userAgent: navigator.userAgent, screen: `${screen.width}x${screen.height}` }
         })
         .select('id')
@@ -222,10 +233,13 @@ const GateMode = () => {
       setSessionId(data.id);
       setIsSetup(false);
       toast.success(`Gate Mode started at ${selectedGate}`);
-    } catch (err) {
-      toast.error('Failed to start gate session');
+    } catch (err: any) {
+      console.error('Failed to start gate session:', err);
+      toast.error(err?.message || 'Failed to start gate session');
+    } finally {
+      setIsStartingSession(false);
     }
-  }, []);
+  }, [isStartingSession]);
 
   const handleFaceDetected = useCallback((entry: GateEntry) => {
     setEntries((prev) => {
