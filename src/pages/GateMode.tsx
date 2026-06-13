@@ -55,6 +55,7 @@ const GateMode = () => {
   const [activePeriodKey, setActivePeriodKey] = useState<string>(() => `period-${new Date().toISOString().slice(0, 10)}-default`);
   const [aiEnhancerEnabled, setAiEnhancerEnabled] = useState(true);
   const [isStartingSession, setIsStartingSession] = useState(false);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -146,7 +147,10 @@ const GateMode = () => {
       }
     };
 
-    void Promise.all([fetchGateStats(), fetchCutoff(), fetchActivePeriod()]);
+    void (async () => {
+      await Promise.all([fetchGateStats(), fetchCutoff(), fetchActivePeriod()]);
+      window.setTimeout(() => setIsBootstrapping(false), 420);
+    })();
 
     const interval = setInterval(fetchGateStats, 15000);
     return () => clearInterval(interval);
