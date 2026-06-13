@@ -58,6 +58,18 @@ interface NavItem {
   count?: number;
 }
 
+const AdminContentSkeleton = () => (
+  <div className="space-y-4 animate-fade-in">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="premium-skeleton h-16 rounded-xl" />
+      ))}
+    </div>
+    <div className="premium-skeleton h-12 rounded-xl" />
+    <div className="premium-skeleton h-[360px] md:h-[460px] rounded-2xl" />
+  </div>
+);
+
 const Admin = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -71,6 +83,7 @@ const Admin = () => {
   const [availableFaces, setAvailableFaces] = useState<{id: string; user_id?: string; name: string; employee_id: string;}[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const refreshTimerRef = useRef<number | null>(null);
   const [stats, setStats] = useState({
     totalFaces: 0,
@@ -87,6 +100,7 @@ const Admin = () => {
 
   const fetchData = useCallback(async () => {
     if (!isAdminOrPrincipal) return;
+    setIsDataLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
 
@@ -195,6 +209,8 @@ const Admin = () => {
       setNotificationCount(count || 0);
     } catch (error) {
       console.error('Error fetching data:', error);
+    } finally {
+      setIsDataLoading(false);
     }
   }, [isAdminOrPrincipal]);
 
@@ -531,8 +547,8 @@ const Admin = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.15 }}>
-                    
-                    {renderContent()}
+
+                    {isDataLoading ? <AdminContentSkeleton /> : renderContent()}
                   </motion.div>
                 </AnimatePresence>
               </div>

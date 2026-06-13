@@ -55,6 +55,7 @@ const GateMode = () => {
   const [activePeriodKey, setActivePeriodKey] = useState<string>(() => `period-${new Date().toISOString().slice(0, 10)}-default`);
   const [aiEnhancerEnabled, setAiEnhancerEnabled] = useState(true);
   const [isStartingSession, setIsStartingSession] = useState(false);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -146,7 +147,10 @@ const GateMode = () => {
       }
     };
 
-    void Promise.all([fetchGateStats(), fetchCutoff(), fetchActivePeriod()]);
+    void (async () => {
+      await Promise.all([fetchGateStats(), fetchCutoff(), fetchActivePeriod()]);
+      window.setTimeout(() => setIsBootstrapping(false), 420);
+    })();
 
     const interval = setInterval(fetchGateStats, 15000);
     return () => clearInterval(interval);
@@ -315,6 +319,22 @@ const GateMode = () => {
 
     return { recognizedCount: recognized, unknownCount: unknown, uniqueStudents: unique };
   }, [entries]);
+
+  if (isSetup && isBootstrapping) {
+    return (
+      <div className="fixed inset-0 bg-background z-50 p-4 sm:p-6">
+        <div className="max-w-3xl mx-auto space-y-4 animate-fade-in">
+          <div className="premium-skeleton h-10 w-56 mx-auto" />
+          <div className="premium-skeleton h-12 w-full rounded-2xl" />
+          <div className="premium-skeleton h-[56vh] w-full rounded-3xl" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="premium-skeleton h-12 rounded-xl" />
+            <div className="premium-skeleton h-12 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isSetup) {
     return <GateModeSetup onStart={startSession} onCancel={() => navigate('/admin')} isStarting={isStartingSession} />;

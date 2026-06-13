@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import PageLayout from '@/components/layouts/PageLayout';
@@ -14,13 +14,32 @@ import AttendanceMethodToggle from '@/components/attendance/AttendanceMethodTogg
 import { BarChart3, Info, Scan, Sparkles, Zap, Activity, QrCode } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
+const AttendanceLoadingSkeleton = ({ isMobile }: { isMobile: boolean }) => (
+  <div className="space-y-4 sm:space-y-6 animate-fade-in">
+    <div className="premium-skeleton h-8 w-52 sm:w-72 mx-auto" />
+    <div className="premium-skeleton h-10 w-full rounded-2xl" />
+    <div className="premium-skeleton h-20 w-full rounded-2xl" />
+    <div className="grid gap-4 lg:grid-cols-3">
+      <div className="lg:col-span-2 premium-skeleton rounded-3xl h-[360px] sm:h-[420px]" />
+      <div className="premium-skeleton rounded-3xl h-[260px] sm:h-[420px]" />
+    </div>
+    {isMobile && <div className="premium-skeleton h-16 rounded-2xl" />}
+  </div>
+);
+
 const Attendance = () => {
   const [activeTab, setActiveTab] = useState('single');
   const [attendanceMethod, setAttendanceMethod] = useState<'face' | 'qr'>('face');
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const prefersReducedMotion = useReducedMotion();
   const minimizeMotion = isMobile || prefersReducedMotion;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsInitialLoading(false), 520);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const tabConfig = [
     { value: 'single', label: 'AI Scanner', shortLabel: 'Scan', icon: Scan },
@@ -168,6 +187,9 @@ const Attendance = () => {
           </motion.div>
 
           {/* Tab Content */}
+          {isInitialLoading ? (
+            <AttendanceLoadingSkeleton isMobile={isMobile} />
+          ) : (
           <AnimatePresence mode="wait">
             {activeTab === 'single' && (
               <motion.div
@@ -332,6 +354,7 @@ const Attendance = () => {
               </motion.div>
             )}
           </AnimatePresence>
+          )}
         </div>
       </PageLayout>
     </PageTransition>
