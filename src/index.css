@@ -371,7 +371,7 @@
 
   /* iOS Glass Panel */
   .glass-panel {
-    @apply bg-white/88 dark:bg-slate-900/84 backdrop-blur-2xl border border-white/55 dark:border-white/18 rounded-3xl shadow-xl;
+    @apply bg-white/90 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/50 dark:border-white/20 rounded-3xl shadow-xl;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5);
     transition: all 0.5s var(--ios-spring);
   }
