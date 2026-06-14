@@ -265,11 +265,11 @@
   .premium-glass-app {
     @apply relative min-h-screen;
     background:
-      linear-gradient(128deg, hsl(var(--neon-orange) / 0.14), transparent 36%),
-      linear-gradient(220deg, hsl(var(--neon-pink) / 0.16), transparent 44%),
-      linear-gradient(42deg, hsl(var(--neon-violet) / 0.16), transparent 48%),
-      radial-gradient(1200px 760px at 50% -10%, hsl(var(--neon-amber) / 0.2), transparent 58%),
-      linear-gradient(160deg, hsl(var(--background)), hsl(var(--secondary) / 0.82));
+      linear-gradient(128deg, hsl(var(--neon-orange) / 0.24), transparent 52%),
+      linear-gradient(220deg, hsl(var(--neon-pink) / 0.24), transparent 58%),
+      linear-gradient(42deg, hsl(var(--neon-violet) / 0.24), transparent 60%),
+      radial-gradient(1200px 760px at 50% -10%, hsl(var(--neon-amber) / 0.28), transparent 68%),
+      linear-gradient(160deg, hsl(var(--background)), hsl(var(--secondary) / 0.94));
   }
 
   .premium-glass-app::before {
@@ -284,10 +284,10 @@
   .premium-glass-main {
     @apply relative rounded-3xl border backdrop-blur-2xl;
     background:
-      linear-gradient(135deg, hsl(var(--card) / 0.84), hsl(var(--card) / 0.42)),
-      linear-gradient(120deg, hsl(var(--neon-orange) / 0.08), transparent 42%),
-      linear-gradient(310deg, hsl(var(--neon-violet) / 0.1), transparent 48%);
-    border-color: hsl(var(--border) / 0.76);
+      linear-gradient(135deg, hsl(var(--card) / 0.94), hsl(var(--card) / 0.84)),
+      linear-gradient(120deg, hsl(var(--neon-orange) / 0.16), transparent 58%),
+      linear-gradient(310deg, hsl(var(--neon-violet) / 0.18), transparent 62%);
+    border-color: hsl(var(--border) / 0.9);
     box-shadow:
       0 30px 72px -34px hsl(var(--background) / 0.75),
       0 14px 40px -20px hsl(var(--neon-pink) / 0.36),
@@ -299,8 +299,8 @@
     content: "";
     @apply absolute inset-0 rounded-3xl pointer-events-none;
     background:
-      linear-gradient(125deg, hsl(var(--foreground) / 0.18), transparent 35%),
-      radial-gradient(130% 90% at 85% 6%, hsl(var(--neon-pink) / 0.18), transparent 54%);
+      linear-gradient(125deg, hsl(var(--foreground) / 0.22), transparent 48%),
+      radial-gradient(130% 90% at 85% 6%, hsl(var(--neon-pink) / 0.26), transparent 64%);
   }
 
   .premium-glass-main::after {
@@ -317,8 +317,8 @@
   }
 
   .premium-glass-navbar {
-    background: linear-gradient(150deg, hsl(var(--card) / 0.84), hsl(var(--card) / 0.56));
-    border-color: hsl(var(--border) / 0.78);
+    background: linear-gradient(150deg, hsl(var(--card) / 0.94), hsl(var(--card) / 0.82));
+    border-color: hsl(var(--border) / 0.9);
     box-shadow:
       0 22px 48px -28px hsl(var(--background) / 0.85),
       0 8px 24px -14px hsl(var(--neon-violet) / 0.35),
@@ -328,10 +328,10 @@
   .liquid-glass-surface {
     @apply border rounded-3xl backdrop-blur-2xl;
     background:
-      linear-gradient(140deg, hsl(var(--card) / 0.78), hsl(var(--card) / 0.38)),
-      linear-gradient(115deg, hsl(var(--neon-orange) / 0.08), transparent 46%),
-      linear-gradient(300deg, hsl(var(--neon-pink) / 0.09), transparent 52%);
-    border-color: hsl(var(--border) / 0.72);
+      linear-gradient(140deg, hsl(var(--card) / 0.92), hsl(var(--card) / 0.8)),
+      linear-gradient(115deg, hsl(var(--neon-orange) / 0.16), transparent 60%),
+      linear-gradient(300deg, hsl(var(--neon-pink) / 0.17), transparent 64%);
+    border-color: hsl(var(--border) / 0.86);
     box-shadow:
       0 20px 44px -24px hsl(var(--background) / 0.76),
       0 10px 24px -14px hsl(var(--neon-violet) / 0.33),
@@ -350,10 +350,10 @@
 
   .neon-liquid-bg {
     background:
-      radial-gradient(620px 420px at 14% 16%, hsl(var(--neon-orange) / 0.18), transparent 62%),
-      radial-gradient(640px 450px at 84% 24%, hsl(var(--neon-pink) / 0.18), transparent 64%),
-      radial-gradient(760px 520px at 48% 86%, hsl(var(--neon-violet) / 0.14), transparent 68%),
-      linear-gradient(165deg, hsl(var(--background)), hsl(var(--secondary) / 0.86));
+      radial-gradient(620px 420px at 14% 16%, hsl(var(--neon-orange) / 0.24), transparent 70%),
+      radial-gradient(640px 450px at 84% 24%, hsl(var(--neon-pink) / 0.24), transparent 72%),
+      radial-gradient(760px 520px at 48% 86%, hsl(var(--neon-violet) / 0.2), transparent 74%),
+      linear-gradient(165deg, hsl(var(--background)), hsl(var(--secondary) / 0.94));
   }
 
   .native-app-shell {
@@ -371,7 +371,7 @@
 
   /* iOS Glass Panel */
   .glass-panel {
-    @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-3xl shadow-xl;
+    @apply bg-white/88 dark:bg-slate-900/84 backdrop-blur-2xl border border-white/55 dark:border-white/18 rounded-3xl shadow-xl;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5);
     transition: all 0.5s var(--ios-spring);
   }
