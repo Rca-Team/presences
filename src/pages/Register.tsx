@@ -412,6 +412,41 @@ const Register = () => {
                 <p className="mt-2 text-muted-foreground">Register with a guided 3D face scan</p>
               </motion.div>
 
+              {drafts.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 rounded-xl border border-primary/25 liquid-glass-surface p-3"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <History className="h-4 w-4 text-primary" /> Pending registrations
+                    </div>
+                    <span className="text-xs text-muted-foreground">Auto-saved in real-time</span>
+                  </div>
+                  <div className="space-y-2">
+                    {drafts.slice(0, 3).map((draft) => (
+                      <div key={draft.id} className="flex items-center justify-between rounded-lg border border-border/70 bg-card/80 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{draft.formData.name || 'Unnamed student'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {draft.formData.employeeId || 'No ID yet'} · {draft.status === 'pending_face_scan' ? 'Ready for 3D Face Scan' : 'Student Info in progress'}
+                          </p>
+                        </div>
+                        <div className="ml-3 flex items-center gap-1">
+                          <Button type="button" size="sm" variant="outline" onClick={() => resumeDraft(draft)}>
+                            <Play className="mr-1 h-3.5 w-3.5" /> Resume
+                          </Button>
+                          <Button type="button" size="icon" variant="ghost" onClick={() => clearDraftById(draft.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
               {/* Progress Steps */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="mb-8">
                 <div className="flex items-center justify-between relative">
