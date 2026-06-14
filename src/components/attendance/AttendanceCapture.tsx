@@ -200,7 +200,14 @@ const AttendanceCapture: React.FC<AttendanceCaptureProps> = ({ classScope }) => 
           const displaySize = { width: video.videoWidth, height: video.videoHeight };
           faceapi.matchDimensions(canvas, displaySize);
 
-          const resizedDetections = faceapi.resizeResults(detections, displaySize);
+          if (!displaySize.width || !displaySize.height) {
+            return;
+          }
+          const safeDetections = detections.filter((d) => {
+            const b = d?.detection?.box;
+            return Number.isFinite(b?.x) && Number.isFinite(b?.y) && Number.isFinite(b?.width) && Number.isFinite(b?.height);
+          });
+          const resizedDetections = faceapi.resizeResults(safeDetections, displaySize);
           const ctx = canvas.getContext('2d');
           if (ctx) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
