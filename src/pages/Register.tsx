@@ -20,7 +20,7 @@ import AutoCapture10 from '@/components/register/AutoCapture10';
 import IDCardAutoFillScanner, { IDCardExtractedFields } from '@/components/register/IDCardAutoFillScanner';
 import { 
   User, Mail, Phone, Building2, GraduationCap, Camera, CheckCircle2,
-  ArrowRight, ArrowLeft, Sparkles, Shield, Users, Scan, Heart, Bus, Zap, MapPin
+  ArrowRight, ArrowLeft, Sparkles, Shield, Users, Scan, Heart, Bus, Zap, MapPin, History, Play, Trash2
 } from 'lucide-react';
 import { 
   CLASSES, SECTIONS, ALL_CLASS_SECTIONS, TRANSPORT_MODES, BLOOD_GROUPS 
@@ -44,33 +44,49 @@ const registrationSchema = z.object({
   address: z.string().trim().max(300, 'Address is too long').optional(),
 });
 
+const REGISTER_DRAFTS_KEY = 'presence_register_drafts_v1';
+
+const EMPTY_FORM_DATA = {
+  name: '',
+  email: '',
+  phone: '',
+  parentName: '',
+  parentEmail: '',
+  parentPhone: '',
+  employeeId: '',
+  department: '',
+  position: '',
+  rollNumber: '',
+  bloodGroup: '',
+  medicalInfo: '',
+  transportMode: '',
+  address: '',
+};
+
+type RegisterFormData = typeof EMPTY_FORM_DATA;
+
+interface RegistrationDraft {
+  id: string;
+  formData: RegisterFormData;
+  registrationStep: 1 | 2;
+  captureMode: 'auto' | '3d';
+  status: 'student_info' | 'pending_face_scan';
+  updatedAt: string;
+}
+
 const Register = () => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    parentName: '',
-    parentEmail: '',
-    parentPhone: '',
-    employeeId: '',
-    department: '',
-    position: '',
-    rollNumber: '',
-    bloodGroup: '',
-    medicalInfo: '',
-    transportMode: '',
-    address: '',
-  });
+  const [formData, setFormData] = useState<RegisterFormData>(EMPTY_FORM_DATA);
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [faceDescriptor, setFaceDescriptor] = useState<Float32Array | null>(null);
   const [allDescriptors, setAllDescriptors] = useState<Float32Array[]>([]);
   const [allFaceImages, setAllFaceImages] = useState<string[]>([]);
-  const [registrationStep, setRegistrationStep] = useState(1);
+  const [registrationStep, setRegistrationStep] = useState<1 | 2>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [faceCaptured, setFaceCaptured] = useState(false);
   const [captureMode, setCaptureMode] = useState<'auto' | '3d'>('auto');
+  const [drafts, setDrafts] = useState<RegistrationDraft[]>([]);
 
   const getCleanedFormData = () => ({
     name: formData.name.trim(),
@@ -89,6 +105,90 @@ const Register = () => {
     address: formData.address.trim(),
   });
 
+  const hasFilledStudentInfo = () => {
+    const d = getCleanedFormData();
+    return !!(d.name || d.employeeId || d.department || d.parentName || d.parentPhone || d.rollNumber || d.address);
+  };
+
+  const draftIdFromData = () => {
+    const employeeId = formData.employeeId.trim();
+    if (employeeId) return `emp-${employeeId.toLowerCase()}`;
+    const name = formData.name.trim().toLowerCase().replace(/\s+/g, '-');
+    const parentPhone = formData.parentPhone.trim().replace(/\D/g, '');
+    const fallback = `${name || 'student'}-${parentPhone || 'draft'}`;
+    return `tmp-${fallback}`;
+  };
+
+  const loadDrafts = () => {
+    try {
+      const raw = localStorage.getItem(REGISTER_DRAFTS_KEY);
+      if (!raw) {
+        setDrafts([]);
+        return;
+      }
+      const parsed = JSON.parse(raw) as RegistrationDraft[];
+      if (!Array.isArray(parsed)) {
+        setDrafts([]);
+        return;
+      }
+      setDrafts(
+        parsed
+          .filter((d) => d?.id && d?.formData)
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      );
+    } catch {
+      setDrafts([]);
+    }
+  };
+
+  const persistDraft = (opts?: { forceStep?: 1 | 2 }) => {
+    if (!hasFilledStudentInfo()) return;
+    const cleaned = getCleanedFormData();
+    const now = new Date().toISOString();
+    const step = opts?.forceStep ?? registrationStep;
+    const nextDraft: RegistrationDraft = {
+      id: draftIdFromData(),
+      formData: cleaned,
+      registrationStep: step,
+      captureMode,
+      status: step === 2 ? 'pending_face_scan' : 'student_info',
+      updatedAt: now,
+    };
+
+    try {
+      const currentRaw = localStorage.getItem(REGISTER_DRAFTS_KEY);
+      const current = currentRaw ? (JSON.parse(currentRaw) as RegistrationDraft[]) : [];
+      const merged = [nextDraft, ...(Array.isArray(current) ? current : []).filter((d) => d.id !== nextDraft.id)].slice(0, 20);
+      localStorage.setItem(REGISTER_DRAFTS_KEY, JSON.stringify(merged));
+      setDrafts(merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    } catch {}
+  };
+
+  const clearDraftById = (id: string) => {
+    try {
+      const currentRaw = localStorage.getItem(REGISTER_DRAFTS_KEY);
+      const current = currentRaw ? (JSON.parse(currentRaw) as RegistrationDraft[]) : [];
+      const next = (Array.isArray(current) ? current : []).filter((d) => d.id !== id);
+      localStorage.setItem(REGISTER_DRAFTS_KEY, JSON.stringify(next));
+      setDrafts(next.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    } catch {}
+  };
+
+  const resumeDraft = (draft: RegistrationDraft) => {
+    setFormData({ ...EMPTY_FORM_DATA, ...draft.formData });
+    setCaptureMode(draft.captureMode || 'auto');
+    setRegistrationStep(draft.registrationStep || 1);
+    setFaceCaptured(false);
+    setFaceImage(null);
+    setFaceDescriptor(null);
+    setAllDescriptors([]);
+    setAllFaceImages([]);
+    toast({
+      title: 'Draft resumed',
+      description: draft.registrationStep === 2 ? 'Continue from 3D Face Scan.' : 'Continue filling student info.',
+    });
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -102,7 +202,15 @@ const Register = () => {
       }
     };
     init();
+    loadDrafts();
   }, [toast]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      persistDraft();
+    }, 280);
+    return () => clearTimeout(timeout);
+  }, [formData, registrationStep, captureMode]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -207,13 +315,14 @@ const Register = () => {
           title: "Registration Successful! 🎉",
           description: `3D face model saved with ${allDescriptors.length} training samples for best accuracy.`,
         });
-        setFormData({ name: '', email: '', phone: '', parentName: '', parentEmail: '', parentPhone: '', employeeId: '', department: '', position: '', rollNumber: '', bloodGroup: '', medicalInfo: '', transportMode: '', address: '' });
+        setFormData(EMPTY_FORM_DATA);
         setFaceImage(null);
         setFaceDescriptor(null);
         setAllDescriptors([]);
         setAllFaceImages([]);
         setFaceCaptured(false);
         setRegistrationStep(1);
+        clearDraftById(draftIdFromData());
       } else throw new Error("Registration failed");
     } catch (error) {
       console.error('Error registering:', error);
@@ -226,6 +335,7 @@ const Register = () => {
   const validateStep1 = () => {
     const parsed = registrationSchema.safeParse(getCleanedFormData());
     if (parsed.success) {
+      persistDraft({ forceStep: 2 });
       setRegistrationStep(2);
     } else {
       const firstError = Object.values(parsed.error.flatten().fieldErrors).flat()[0] || 'Please fill in all required fields';
@@ -301,6 +411,41 @@ const Register = () => {
                 <h2 className="text-2xl sm:text-3xl font-bold">Create your profile</h2>
                 <p className="mt-2 text-muted-foreground">Register with a guided 3D face scan</p>
               </motion.div>
+
+              {drafts.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 rounded-xl border border-primary/25 liquid-glass-surface p-3"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <History className="h-4 w-4 text-primary" /> Pending registrations
+                    </div>
+                    <span className="text-xs text-muted-foreground">Auto-saved in real-time</span>
+                  </div>
+                  <div className="space-y-2">
+                    {drafts.slice(0, 3).map((draft) => (
+                      <div key={draft.id} className="flex items-center justify-between rounded-lg border border-border/70 bg-card/80 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{draft.formData.name || 'Unnamed student'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {draft.formData.employeeId || 'No ID yet'} · {draft.status === 'pending_face_scan' ? 'Ready for 3D Face Scan' : 'Student Info in progress'}
+                          </p>
+                        </div>
+                        <div className="ml-3 flex items-center gap-1">
+                          <Button type="button" size="sm" variant="outline" onClick={() => resumeDraft(draft)}>
+                            <Play className="mr-1 h-3.5 w-3.5" /> Resume
+                          </Button>
+                          <Button type="button" size="icon" variant="ghost" onClick={() => clearDraftById(draft.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
 
               {/* Progress Steps */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="mb-8">
