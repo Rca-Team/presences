@@ -20,7 +20,7 @@ import AutoCapture10 from '@/components/register/AutoCapture10';
 import IDCardAutoFillScanner, { IDCardExtractedFields } from '@/components/register/IDCardAutoFillScanner';
 import { 
   User, Mail, Phone, Building2, GraduationCap, Camera, CheckCircle2,
-  ArrowRight, ArrowLeft, Sparkles, Shield, Users, Scan, Heart, Bus, Zap, MapPin
+  ArrowRight, ArrowLeft, Sparkles, Shield, Users, Scan, Heart, Bus, Zap, MapPin, History, Play, Trash2
 } from 'lucide-react';
 import { 
   CLASSES, SECTIONS, ALL_CLASS_SECTIONS, TRANSPORT_MODES, BLOOD_GROUPS 
@@ -43,6 +43,36 @@ const registrationSchema = z.object({
   position: z.string().trim().max(50).optional(),
   address: z.string().trim().max(300, 'Address is too long').optional(),
 });
+
+const REGISTER_DRAFTS_KEY = 'presence_register_drafts_v1';
+
+const EMPTY_FORM_DATA = {
+  name: '',
+  email: '',
+  phone: '',
+  parentName: '',
+  parentEmail: '',
+  parentPhone: '',
+  employeeId: '',
+  department: '',
+  position: '',
+  rollNumber: '',
+  bloodGroup: '',
+  medicalInfo: '',
+  transportMode: '',
+  address: '',
+};
+
+type RegisterFormData = typeof EMPTY_FORM_DATA;
+
+interface RegistrationDraft {
+  id: string;
+  formData: RegisterFormData;
+  registrationStep: 1 | 2;
+  captureMode: 'auto' | '3d';
+  status: 'student_info' | 'pending_face_scan';
+  updatedAt: string;
+}
 
 const Register = () => {
   const { toast } = useToast();
