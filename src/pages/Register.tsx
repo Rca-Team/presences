@@ -76,22 +76,7 @@ interface RegistrationDraft {
 
 const Register = () => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    parentName: '',
-    parentEmail: '',
-    parentPhone: '',
-    employeeId: '',
-    department: '',
-    position: '',
-    rollNumber: '',
-    bloodGroup: '',
-    medicalInfo: '',
-    transportMode: '',
-    address: '',
-  });
+  const [formData, setFormData] = useState<RegisterFormData>(EMPTY_FORM_DATA);
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [faceDescriptor, setFaceDescriptor] = useState<Float32Array | null>(null);
   const [allDescriptors, setAllDescriptors] = useState<Float32Array[]>([]);
@@ -101,6 +86,7 @@ const Register = () => {
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [faceCaptured, setFaceCaptured] = useState(false);
   const [captureMode, setCaptureMode] = useState<'auto' | '3d'>('auto');
+  const [drafts, setDrafts] = useState<RegistrationDraft[]>([]);
 
   const getCleanedFormData = () => ({
     name: formData.name.trim(),
@@ -119,6 +105,90 @@ const Register = () => {
     address: formData.address.trim(),
   });
 
+  const hasFilledStudentInfo = () => {
+    const d = getCleanedFormData();
+    return !!(d.name || d.employeeId || d.department || d.parentName || d.parentPhone || d.rollNumber || d.address);
+  };
+
+  const draftIdFromData = () => {
+    const employeeId = formData.employeeId.trim();
+    if (employeeId) return `emp-${employeeId.toLowerCase()}`;
+    const name = formData.name.trim().toLowerCase().replace(/\s+/g, '-');
+    const parentPhone = formData.parentPhone.trim().replace(/\D/g, '');
+    const fallback = `${name || 'student'}-${parentPhone || 'draft'}`;
+    return `tmp-${fallback}`;
+  };
+
+  const loadDrafts = () => {
+    try {
+      const raw = localStorage.getItem(REGISTER_DRAFTS_KEY);
+      if (!raw) {
+        setDrafts([]);
+        return;
+      }
+      const parsed = JSON.parse(raw) as RegistrationDraft[];
+      if (!Array.isArray(parsed)) {
+        setDrafts([]);
+        return;
+      }
+      setDrafts(
+        parsed
+          .filter((d) => d?.id && d?.formData)
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      );
+    } catch {
+      setDrafts([]);
+    }
+  };
+
+  const persistDraft = (opts?: { forceStep?: 1 | 2 }) => {
+    if (!hasFilledStudentInfo()) return;
+    const cleaned = getCleanedFormData();
+    const now = new Date().toISOString();
+    const step = opts?.forceStep ?? registrationStep;
+    const nextDraft: RegistrationDraft = {
+      id: draftIdFromData(),
+      formData: cleaned,
+      registrationStep: step,
+      captureMode,
+      status: step === 2 ? 'pending_face_scan' : 'student_info',
+      updatedAt: now,
+    };
+
+    try {
+      const currentRaw = localStorage.getItem(REGISTER_DRAFTS_KEY);
+      const current = currentRaw ? (JSON.parse(currentRaw) as RegistrationDraft[]) : [];
+      const merged = [nextDraft, ...(Array.isArray(current) ? current : []).filter((d) => d.id !== nextDraft.id)].slice(0, 20);
+      localStorage.setItem(REGISTER_DRAFTS_KEY, JSON.stringify(merged));
+      setDrafts(merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    } catch {}
+  };
+
+  const clearDraftById = (id: string) => {
+    try {
+      const currentRaw = localStorage.getItem(REGISTER_DRAFTS_KEY);
+      const current = currentRaw ? (JSON.parse(currentRaw) as RegistrationDraft[]) : [];
+      const next = (Array.isArray(current) ? current : []).filter((d) => d.id !== id);
+      localStorage.setItem(REGISTER_DRAFTS_KEY, JSON.stringify(next));
+      setDrafts(next.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    } catch {}
+  };
+
+  const resumeDraft = (draft: RegistrationDraft) => {
+    setFormData({ ...EMPTY_FORM_DATA, ...draft.formData });
+    setCaptureMode(draft.captureMode || 'auto');
+    setRegistrationStep(draft.registrationStep || 1);
+    setFaceCaptured(false);
+    setFaceImage(null);
+    setFaceDescriptor(null);
+    setAllDescriptors([]);
+    setAllFaceImages([]);
+    toast({
+      title: 'Draft resumed',
+      description: draft.registrationStep === 2 ? 'Continue from 3D Face Scan.' : 'Continue filling student info.',
+    });
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -132,7 +202,15 @@ const Register = () => {
       }
     };
     init();
+    loadDrafts();
   }, [toast]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      persistDraft();
+    }, 280);
+    return () => clearTimeout(timeout);
+  }, [formData, registrationStep, captureMode]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -237,13 +315,14 @@ const Register = () => {
           title: "Registration Successful! 🎉",
           description: `3D face model saved with ${allDescriptors.length} training samples for best accuracy.`,
         });
-        setFormData({ name: '', email: '', phone: '', parentName: '', parentEmail: '', parentPhone: '', employeeId: '', department: '', position: '', rollNumber: '', bloodGroup: '', medicalInfo: '', transportMode: '', address: '' });
+        setFormData(EMPTY_FORM_DATA);
         setFaceImage(null);
         setFaceDescriptor(null);
         setAllDescriptors([]);
         setAllFaceImages([]);
         setFaceCaptured(false);
         setRegistrationStep(1);
+        clearDraftById(draftIdFromData());
       } else throw new Error("Registration failed");
     } catch (error) {
       console.error('Error registering:', error);
@@ -256,6 +335,7 @@ const Register = () => {
   const validateStep1 = () => {
     const parsed = registrationSchema.safeParse(getCleanedFormData());
     if (parsed.success) {
+      persistDraft({ forceStep: 2 });
       setRegistrationStep(2);
     } else {
       const firstError = Object.values(parsed.error.flatten().fieldErrors).flat()[0] || 'Please fill in all required fields';
