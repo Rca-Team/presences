@@ -302,8 +302,18 @@ const GateModeScanner = ({
 
       // Draw overlays with confidence
       if (canvasRef.current && videoRef.current) {
+        const vw = videoRef.current.videoWidth;
+        const vh = videoRef.current.videoHeight;
+        if (!vw || !vh) {
+          processingRef.current = false;
+          return;
+        }
         const dims = faceapi.matchDimensions(canvasRef.current, videoRef.current, true);
-        const resized = faceapi.resizeResults(detections, dims);
+        const safeDetections = detections.filter((d) => {
+          const b = d?.detection?.box;
+          return Number.isFinite(b?.x) && Number.isFinite(b?.y) && Number.isFinite(b?.width) && Number.isFinite(b?.height);
+        });
+        const resized = faceapi.resizeResults(safeDetections, dims);
         const ctx = canvasRef.current.getContext('2d');
         if (ctx) {
           ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);

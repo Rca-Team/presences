@@ -93,7 +93,15 @@ const ClassPhotoRegistration = () => {
         const displaySize = { width: imageRef.current.width, height: imageRef.current.height };
         faceapi.matchDimensions(canvas, displaySize);
         
-        const resizedDetections = faceapi.resizeResults(detections, displaySize);
+        if (!displaySize.width || !displaySize.height) {
+          setProcessing(false);
+          return;
+        }
+        const safeDetections = detections.filter((d) => {
+          const b = d?.detection?.box;
+          return Number.isFinite(b?.x) && Number.isFinite(b?.y) && Number.isFinite(b?.width) && Number.isFinite(b?.height);
+        });
+        const resizedDetections = faceapi.resizeResults(safeDetections, displaySize);
         
         canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
         faceapi.draw.drawDetections(canvas, resizedDetections);

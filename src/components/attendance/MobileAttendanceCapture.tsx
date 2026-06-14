@@ -130,7 +130,14 @@ const MobileAttendanceCapture: React.FC<MobileAttendanceCaptureProps> = ({ onCom
           if (ctx) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            const resizedDetections = faceapi.resizeResults(detections, displaySize);
+            if (!displaySize.width || !displaySize.height) {
+              return;
+            }
+            const safeDetections = detections.filter((d) => {
+              const b = d?.box;
+              return Number.isFinite(b?.x) && Number.isFinite(b?.y) && Number.isFinite(b?.width) && Number.isFinite(b?.height);
+            });
+            const resizedDetections = faceapi.resizeResults(safeDetections, displaySize);
             resizedDetections.forEach(detection => {
               const box = detection.box;
               
