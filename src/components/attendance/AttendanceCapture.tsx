@@ -553,9 +553,16 @@ const AttendanceCapture: React.FC<AttendanceCaptureProps> = ({ classScope }) => 
                           class: classScope.className,
                           section: classScope.section,
                           subject: classScope.subject,
+                          manual_confirmation: true,
+                          force_attendance_save: true,
                         },
                       }
-                    : undefined,
+                    : {
+                        metadata: {
+                          manual_confirmation: true,
+                          force_attendance_save: true,
+                        },
+                      },
                   c.imageUrl,
                   'ai-scan'
                 );

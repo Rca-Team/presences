@@ -487,14 +487,18 @@ export async function recordAttendance(
     // Only mark attendance when face match confidence is above 50%.
     // 'unauthorized' (unknown face) and explicit absence records bypass this gate.
     const MIN_ATTENDANCE_CONFIDENCE = 0.65;
+    const isManualConfirmation =
+      Boolean(deviceInfo?.metadata?.manual_confirmation) ||
+      Boolean(deviceInfo?.metadata?.force_attendance_save);
     if (
+      !isManualConfirmation &&
       status !== 'unauthorized' &&
       status !== 'absent' &&
       typeof confidence === 'number' &&
       confidence < MIN_ATTENDANCE_CONFIDENCE
     ) {
       console.warn(
-        `[Attendance] Skipping mark — confidence ${(confidence * 100).toFixed(1)}% below 50% threshold for user ${userId}`,
+        `[Attendance] Skipping mark — confidence ${(confidence * 100).toFixed(1)}% below ${(MIN_ATTENDANCE_CONFIDENCE * 100).toFixed(0)}% threshold for user ${userId}`,
       );
       return { skipped: true, reason: 'low_confidence', confidence };
     }
