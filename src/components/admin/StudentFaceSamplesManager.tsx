@@ -53,7 +53,13 @@ const resolveFaceSampleUrl = async (
   const value = rawValue.trim();
   if (!value) return null;
 
-  if (value.startsWith('data:') || value.startsWith('blob:') || /^https?:\/\//i.test(value)) {
+  const isStorageObjectUrl = /\/storage\/v1\/object\/(?:public|sign)\//.test(value);
+
+  if (value.startsWith('data:') || value.startsWith('blob:')) {
+    return value;
+  }
+
+  if (/^https?:\/\//i.test(value) && !isStorageObjectUrl) {
     return value;
   }
 
