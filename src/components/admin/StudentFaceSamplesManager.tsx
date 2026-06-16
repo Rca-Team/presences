@@ -36,6 +36,61 @@ type StudentGroup = {
 };
 
 const isSlot = (s: FaceSample) => s.source_table === 'face_descriptors';
+const FACE_SAMPLE_BUCKETS = ['face-images', 'attendance-training-faces', 'student-registration-faces'] as const;
+
+const parseStoragePathFromUrl = (value: string, bucket: string): string | null => {
+  const cleaned = value.trim();
+  const pattern = new RegExp(`/storage/v1/object/(?:public|sign)/${bucket}/([^?]+)`);
+  const match = cleaned.match(pattern);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+};
+
+const resolveFaceSampleUrl = async (
+  rawValue: string | null | undefined,
+  signedUrlCache: Map<string, string | null>
+): Promise<string | null> => {
+  if (!rawValue) return null;
+  const value = rawValue.trim();
+  if (!value) return null;
+
+  if (value.startsWith('data:') || value.startsWith('blob:') || /^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  const candidates = new Set<{ bucket: string; path: string }>();
+
+  FACE_SAMPLE_BUCKETS.forEach((bucket) => {
+    const extracted = parseStoragePathFromUrl(value, bucket);
+    if (extracted) candidates.add({ bucket, path: extracted });
+  });
+
+  if (candidates.size === 0) {
+    const normalized = value.replace(/^\/+/, '');
+    FACE_SAMPLE_BUCKETS.forEach((bucket) => candidates.add({ bucket, path: normalized }));
+  }
+
+  for (const candidate of candidates) {
+    const cacheKey = `${candidate.bucket}:${candidate.path}`;
+    if (signedUrlCache.has(cacheKey)) {
+      const cached = signedUrlCache.get(cacheKey);
+      if (cached) return cached;
+      continue;
+    }
+
+    const { data, error } = await supabase.storage
+      .from(candidate.bucket)
+      .createSignedUrl(candidate.path, 60 * 60);
+
+    if (!error && data?.signedUrl) {
+      signedUrlCache.set(cacheKey, data.signedUrl);
+      return data.signedUrl;
+    }
+
+    signedUrlCache.set(cacheKey, null);
+  }
+
+  return null;
+};
 
 const StudentFaceSamplesManager: React.FC = () => {
   const { toast } = useToast();
@@ -178,9 +233,25 @@ const StudentFaceSamplesManager: React.FC = () => {
       });
 
       const next = Array.from(grouped.values()).sort((a, b) => a.name.localeCompare(b.name));
-      setGroups(next);
-      if (!selectedUserId && next.length > 0) {
-        setSelectedUserId(next[0].userId);
+      const signedUrlCache = new Map<string, string | null>();
+      const hydratedGroups = await Promise.all(
+        next.map(async (group) => ({
+          ...group,
+          samples: await Promise.all(
+            group.samples.map(async (sample) => {
+              const resolved = await resolveFaceSampleUrl(sample.image_url, signedUrlCache);
+              return {
+                ...sample,
+                image_url: resolved,
+              };
+            })
+          ),
+        }))
+      );
+
+      setGroups(hydratedGroups);
+      if (!selectedUserId && hydratedGroups.length > 0) {
+        setSelectedUserId(hydratedGroups[0].userId);
       }
     } catch (error) {
       console.error('Failed to fetch face samples:', error);
