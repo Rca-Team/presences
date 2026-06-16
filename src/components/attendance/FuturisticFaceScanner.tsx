@@ -554,6 +554,7 @@ const FuturisticFaceScanner: React.FC<FuturisticFaceScannerProps> = ({ onScanCom
             strict_fused_score: review.strictScore,
             strict_threshold_target: review.thresholdTarget,
             manual_confirmation: true,
+            force_attendance_save: true,
           },
         },
         review.capturedImageDataUrl,
