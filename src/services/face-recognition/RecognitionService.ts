@@ -263,7 +263,7 @@ export async function recognizeFace(faceDescriptor: Float32Array): Promise<Recog
     let bestMatch: { userId: string; userName: string; distance: number; sampleCount: number } | null = null;
     // face-api.js typical same-person distance: 0.3–0.45
     // Use stricter threshold for school gate accuracy (balanced high-accuracy mode)
-    const MATCH_THRESHOLD = 0.5;
+    const MATCH_THRESHOLD = 0.62;
     let bestDistance = MATCH_THRESHOLD;
     
     for (const [userId, data] of trainedDescriptors) {
