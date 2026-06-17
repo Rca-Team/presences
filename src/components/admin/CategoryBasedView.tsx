@@ -216,7 +216,11 @@ const CategoryBasedView: React.FC = () => {
       let successCount = 0, failCount = 0;
       for (const user of categoryUsers) {
         if (!user.user_id) continue;
-        const { data: profile } = await supabase.from('profiles').select('parent_email, parent_name').eq('user_id', user.user_id).single();
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('parent_email, parent_name, parent_phone, phone, metadata')
+          .eq('user_id', user.user_id)
+          .single();
         if (profile?.parent_email) {
           try {
             await supabase.functions.invoke('send-notification', {
