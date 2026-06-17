@@ -216,7 +216,7 @@ const AdminNotificationSender: React.FC<AdminNotificationSenderProps> = ({ avail
       
       toast({
         title: successCount > 0 ? "Notifications Sent" : "Send Failed",
-        description: `Successfully sent ${successCount} notification(s). ${failedCount > 0 ? `${failedCount} failed.` : ''}`,
+        description: `Successfully processed ${successCount} email + WhatsApp notification(s). ${failedCount > 0 ? `${failedCount} failed.` : ''}`,
         variant: successCount > 0 ? "default" : "destructive",
       });
 

@@ -171,8 +171,8 @@ School Administration`;
       await Promise.all(notificationPromises);
 
       toast({
-        title: "Bulk Email Notification Complete",
-        description: `Successfully sent ${successCount} email notifications. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
+        title: "Bulk Notification Complete",
+        description: `Successfully processed ${successCount} email + WhatsApp notifications. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
         variant: errorCount > 0 ? "destructive" : "default",
       });
       
@@ -244,7 +244,7 @@ School Administration`;
       
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Send Bulk Email Notifications to Parents</DialogTitle>
+          <DialogTitle>Send Bulk Parent Notifications (Email + WhatsApp)</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -263,7 +263,7 @@ School Administration`;
             </Alert>
           )}
           <div className="space-y-2">
-            <Label htmlFor="subject">Email Subject</Label>
+            <Label htmlFor="subject">Notification Subject</Label>
             <Input
               id="subject"
               value={subject}
@@ -273,8 +273,8 @@ School Administration`;
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="message">
-              Email Message
+              <Label htmlFor="message">
+                Notification Message
               <span className="text-xs text-muted-foreground ml-2">
                 (Use {'{STUDENT_NAME}'} and {'{STUDENT_ID}'} for personalization)
               </span>
@@ -327,7 +327,7 @@ School Administration`;
             </Button>
             <Button onClick={sendBulkNotification} disabled={isLoading || selectedStudents.length === 0}>
               <Mail className="h-4 w-4 mr-2" />
-              {isLoading ? "Sending..." : `Send Email to ${selectedStudents.length} Students`}
+              {isLoading ? "Sending..." : `Send Notification to ${selectedStudents.length} Students`}
             </Button>
           </div>
         </div>
