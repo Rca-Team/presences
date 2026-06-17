@@ -140,7 +140,8 @@ const NotificationService: React.FC<NotificationServiceProps> = ({
         body: {
           recipient: {
             email: parentInfo.parent_email,
-            name: parentInfo.parent_name
+            name: parentInfo.parent_name,
+            phone: null,
           },
           message: {
             subject: subject || getDefaultSubject(),
@@ -157,8 +158,8 @@ const NotificationService: React.FC<NotificationServiceProps> = ({
       if (error) throw error;
 
       toast({
-        title: "Email Notification Sent",
-        description: "Email notification sent successfully to parent.",
+        title: "Notification Sent",
+        description: "Email + WhatsApp notification processed for parent.",
       });
       
       setOpen(false);
@@ -315,7 +316,7 @@ const NotificationService: React.FC<NotificationServiceProps> = ({
       
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Send Email Notification to Parent</DialogTitle>
+          <DialogTitle>Send Parent Notification (Email + WhatsApp)</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4 pt-4">
@@ -363,7 +364,7 @@ const NotificationService: React.FC<NotificationServiceProps> = ({
           ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor="subject">Email Subject</Label>
+            <Label htmlFor="subject">Notification Subject</Label>
             <Input
               id="subject"
               value={subject}
@@ -373,7 +374,7 @@ const NotificationService: React.FC<NotificationServiceProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="message">Email Message</Label>
+            <Label htmlFor="message">Notification Message</Label>
             <Textarea
               id="message"
               value={message}
@@ -384,8 +385,8 @@ const NotificationService: React.FC<NotificationServiceProps> = ({
           </div>
 
           <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
-            <p className="font-medium">📧 Email Notifications:</p>
-            <p className="text-xs text-muted-foreground">Professional email notifications sent via Resend (3,000 free emails/month)</p>
+            <p className="font-medium">📧 + 💬 Dual Channel:</p>
+            <p className="text-xs text-muted-foreground">This sends email and WhatsApp together when contact details are available.</p>
           </div>
           
           <div className="flex justify-end space-x-2 pt-2">
@@ -397,7 +398,7 @@ const NotificationService: React.FC<NotificationServiceProps> = ({
               disabled={isLoading || !hasParentEmail}
             >
               <Mail className="h-4 w-4 mr-2" />
-              {isLoading ? "Sending..." : "Send Email"}
+              {isLoading ? "Sending..." : "Send Notification"}
             </Button>
           </div>
         </div>
