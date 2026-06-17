@@ -106,7 +106,7 @@ School Administration`;
           const targetUserId = selectedFace?.user_id || studentId;
           let { data: profile } = await supabase
             .from('profiles')
-            .select('parent_email, parent_name, display_name')
+            .select('parent_email, parent_name, parent_phone, phone, metadata, display_name')
             .eq('user_id', targetUserId)
             .maybeSingle();
 
@@ -114,7 +114,7 @@ School Administration`;
           if (!profile) {
             const result = await supabase
               .from('profiles')
-              .select('parent_email, parent_name, display_name')
+              .select('parent_email, parent_name, parent_phone, phone, metadata, display_name')
               .eq('id', studentId)
               .maybeSingle();
             profile = result.data;
@@ -129,7 +129,8 @@ School Administration`;
 
           const parentInfo = {
             parent_email: profile.parent_email,
-            parent_name: profile.parent_name || `Parent of ${selectedFace?.name}`
+            parent_name: profile.parent_name || `Parent of ${selectedFace?.name}`,
+            parent_phone: (profile as any)?.parent_phone || (profile as any)?.metadata?.parent_phone || profile.phone || null,
           };
 
           // Personalize message for this student
@@ -143,7 +144,8 @@ School Administration`;
             body: {
               recipient: {
                 email: parentInfo.parent_email,
-                name: parentInfo.parent_name
+                name: parentInfo.parent_name,
+                phone: parentInfo.parent_phone,
               },
               message: {
                 subject: personalizedSubject,

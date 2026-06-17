@@ -220,7 +220,23 @@ const CategoryBasedView: React.FC = () => {
         if (profile?.parent_email) {
           try {
             await supabase.functions.invoke('send-notification', {
-              body: { recipient: profile.parent_email, subject: notificationSubject || `${getCategoryLabel(selectedCategory)} Notification`, message: notificationMessage, studentName: user.name, parentName: profile.parent_name || 'Parent' },
+              body: {
+                recipient: {
+                  email: profile.parent_email,
+                  name: profile.parent_name || 'Parent',
+                  phone: (profile as any)?.parent_phone || (profile as any)?.metadata?.parent_phone || profile.phone || null,
+                },
+                message: {
+                  subject: notificationSubject || `${getCategoryLabel(selectedCategory)} Notification`,
+                  body: notificationMessage,
+                },
+                student: {
+                  id: user.user_id || user.id,
+                  name: user.name,
+                  status: 'notification',
+                },
+                targetUserId: user.user_id || undefined,
+              },
             });
             successCount++;
           } catch { failCount++; }

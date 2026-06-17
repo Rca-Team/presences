@@ -155,14 +155,14 @@ const AdminNotificationSender: React.FC<AdminNotificationSenderProps> = ({ avail
           const targetUserId = student.user_id || student.id;
           let { data: profile } = await supabase
             .from('profiles')
-            .select('parent_email, parent_name, display_name')
+            .select('parent_email, parent_name, parent_phone, phone, metadata, display_name')
             .eq('user_id', targetUserId)
             .maybeSingle();
 
           if (!profile) {
             const result = await supabase
               .from('profiles')
-              .select('parent_email, parent_name, display_name')
+              .select('parent_email, parent_name, parent_phone, phone, metadata, display_name')
               .eq('id', student.id)
               .maybeSingle();
             profile = result.data;
@@ -188,7 +188,8 @@ const AdminNotificationSender: React.FC<AdminNotificationSenderProps> = ({ avail
             body: {
               recipient: {
                 email: profile.parent_email,
-                name: profile.parent_name || `Parent of ${student.name}`
+                name: profile.parent_name || `Parent of ${student.name}`,
+                phone: (profile as any)?.parent_phone || (profile as any)?.metadata?.parent_phone || profile.phone || null,
               },
               message: {
                 subject: personalizedSubject,

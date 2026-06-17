@@ -140,7 +140,8 @@ const NotificationService: React.FC<NotificationServiceProps> = ({
         body: {
           recipient: {
             email: parentInfo.parent_email,
-            name: parentInfo.parent_name
+            name: parentInfo.parent_name,
+            phone: null,
           },
           message: {
             subject: subject || getDefaultSubject(),
