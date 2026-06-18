@@ -5,10 +5,12 @@ const resendApiKey = Deno.env.get('RESEND_API_KEY')
 const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
 const whatsappAccessToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
 const whatsappPhoneNumberId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')
+const fast2smsApiKey = Deno.env.get('FAST2SMS_API_KEY')
+const cronSecret = Deno.env.get('CRON_SECRET')
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 }
 
 function escapeHtml(text: string): string {
@@ -113,6 +115,51 @@ async function sendWhatsAppMessage(phoneNumber: string, message: string) {
     return { success: true, messageId: data?.messages?.[0]?.id ?? null }
   } catch (err: any) {
     return { success: false, error: err?.message || 'WhatsApp send failed' }
+  }
+}
+
+async function sendSmsMessage(phoneNumber: string, message: string) {
+  const formattedPhone = normalizePhone(phoneNumber)
+  if (!formattedPhone) return { success: false, provider: 'none', error: 'Invalid phone number' }
+
+  if (fast2smsApiKey && formattedPhone.startsWith('91') && formattedPhone.length === 12) {
+    try {
+      const cleanPhone = formattedPhone.slice(2)
+      const url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(fast2smsApiKey)}&route=q&message=${encodeURIComponent(message)}&language=english&flash=0&numbers=${cleanPhone}`
+      const response = await fetch(url)
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || data?.return === false) {
+        return {
+          success: false,
+          provider: 'fast2sms',
+          error: data?.message?.join?.(', ') || data?.message || 'Fast2SMS send failed',
+        }
+      }
+      return { success: true, provider: 'fast2sms', messageId: data?.request_id ?? null }
+    } catch (err: any) {
+      return { success: false, provider: 'fast2sms', error: err?.message || 'Fast2SMS send failed' }
+    }
+  }
+
+  try {
+    const response = await fetch('https://textbelt.com/text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        phone: `+${formattedPhone}`,
+        message,
+        key: 'textbelt',
+      }),
+    })
+
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok || !data?.success) {
+      return { success: false, provider: 'textbelt', error: data?.error || 'Textbelt send failed' }
+    }
+
+    return { success: true, provider: 'textbelt', messageId: data?.textId ?? null }
+  } catch (err: any) {
+    return { success: false, provider: 'textbelt', error: err?.message || 'Textbelt send failed' }
   }
 }
 
@@ -242,7 +289,10 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
+    const cronHeader = req.headers.get('x-cron-secret')
+    const isCronCall = !!cronSecret && !!cronHeader && cronHeader === cronSecret
+
+    if (!authHeader && !isCronCall) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -252,26 +302,32 @@ serve(async (req) => {
     const supabaseClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
       global: { headers: { Authorization: authHeader } },
     })
+    const dbClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
-    if (authError || !user) {
+    const { data: { user }, error: authError } = authHeader
+      ? await supabaseClient.auth.getUser()
+      : { data: { user: null }, error: null }
+
+    if (authHeader && (authError || !user)) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const [{ data: roleData }, { data: teacherData }] = await Promise.all([
-      supabaseClient.from('user_roles').select('role').eq('user_id', user.id).in('role', ['admin', 'principal']).maybeSingle(),
-      supabaseClient.from('teacher_permissions').select('id').eq('user_id', user.id).limit(1),
-    ])
+    if (!isCronCall) {
+      const [{ data: roleData }, { data: teacherData }] = await Promise.all([
+        supabaseClient.from('user_roles').select('role').eq('user_id', user!.id).in('role', ['admin', 'principal']).maybeSingle(),
+        supabaseClient.from('teacher_permissions').select('id').eq('user_id', user!.id).limit(1),
+      ])
 
-    const isAuthorized = roleData || (teacherData && teacherData.length > 0)
-    if (!isAuthorized) {
-      return new Response(JSON.stringify({ error: 'Forbidden - Admin, Principal, or Teacher access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      const isAuthorized = roleData || (teacherData && teacherData.length > 0)
+      if (!isAuthorized) {
+        return new Response(JSON.stringify({ error: 'Forbidden - Admin, Principal, or Teacher access required' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     const rawBody = await req.json()
@@ -284,7 +340,7 @@ serve(async (req) => {
     }
 
     const parentContact = await resolveParentContact(
-      supabaseClient,
+      dbClient,
       payload.targetUserId,
       payload.student.id,
     )
@@ -330,13 +386,21 @@ serve(async (req) => {
 
     let whatsappSent = false
     let whatsappError: string | null = null
+    let smsSent = false
+    let smsError: string | null = null
+    let smsProvider: string | null = null
     if (recipientPhone) {
       const whatsappBody = `${payload.subject}\n\n${payload.body}`
       const waResult = await sendWhatsAppMessage(recipientPhone, whatsappBody)
       whatsappSent = waResult.success
       whatsappError = waResult.success ? null : waResult.error || 'WhatsApp failed'
 
-      await supabaseClient.from('notification_log').insert({
+      const smsResult = await sendSmsMessage(recipientPhone, payload.body)
+      smsSent = smsResult.success
+      smsError = smsResult.success ? null : smsResult.error || 'SMS failed'
+      smsProvider = smsResult.provider || null
+
+      await dbClient.from('notification_log').insert({
         recipient_phone: recipientPhone,
         recipient_id: payload.targetUserId || payload.student.id || null,
         message_content: whatsappBody,
@@ -344,6 +408,16 @@ serve(async (req) => {
         language: 'en',
         status: waResult.success ? 'sent' : 'failed',
         gateway_response: waResult as any,
+      })
+
+      await dbClient.from('notification_log').insert({
+        recipient_phone: recipientPhone,
+        recipient_id: payload.targetUserId || payload.student.id || null,
+        message_content: payload.body,
+        notification_type: 'sms',
+        language: 'en',
+        status: smsResult.success ? 'sent' : 'failed',
+        gateway_response: smsResult as any,
       })
     }
 
@@ -360,23 +434,25 @@ serve(async (req) => {
     }
 
     await supabaseClient.from('notifications').insert({
-      user_id: user.id,
+      user_id: user?.id || payload.targetUserId || payload.student.id || null,
       title: `Notification dispatch${payload.student.name ? ` • ${payload.student.name}` : ''}`,
       message: [
         emailSent ? 'Email: sent' : emailError ? `Email: ${emailError}` : 'Email: skipped',
         whatsappSent ? 'WhatsApp: sent' : whatsappError ? `WhatsApp: ${whatsappError}` : 'WhatsApp: skipped',
+        smsSent ? `SMS (${smsProvider || 'provider'}): sent` : smsError ? `SMS: ${smsError}` : 'SMS: skipped',
         inAppNotification ? 'In-app: sent' : 'In-app: skipped',
       ].join(' | '),
       type: 'notification_dispatch',
     })
 
-    const success = emailSent || whatsappSent || inAppNotification
+    const success = emailSent || whatsappSent || smsSent || inAppNotification
     return new Response(JSON.stringify({
       success,
       message: success ? 'Notification processed' : 'No channel delivered',
       channels: {
         email: { sent: emailSent, id: emailId, error: emailError },
         whatsapp: { sent: whatsappSent, error: whatsappError },
+        sms: { sent: smsSent, provider: smsProvider, error: smsError },
         inApp: { sent: inAppNotification },
       },
     }), {

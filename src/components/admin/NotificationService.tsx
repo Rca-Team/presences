@@ -159,7 +159,7 @@ const NotificationService: React.FC<NotificationServiceProps> = ({
 
       toast({
         title: "Notification Sent",
-        description: "Email + WhatsApp notification processed for parent.",
+        description: "Email + WhatsApp + SMS notification processed for parent.",
       });
       
       setOpen(false);

@@ -106,27 +106,39 @@ async function fanOutNotification(client: any, n: {
     } catch (e) { console.error('email failed', e); }
   }
 
-  // 3) SMS via Twilio (credentials stored in attendance_settings)
+  // 3) SMS via Fast2SMS (if configured) with free Textbelt fallback
   if (channels.sms && n.parentPhone) {
-    const sid   = await getSetting(client, 'twilio_account_sid');
-    const token = await getSetting(client, 'twilio_auth_token');
-    const from  = await getSetting(client, 'twilio_from_number');
-    if (sid && token && from) {
-      try {
-        const auth = btoa(`${sid}:${token}`);
-        const res = await fetch(
-          `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Basic ${auth}`,
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({ To: n.parentPhone, From: from, Body: smsBody }),
-          },
-        );
-        if (!res.ok) console.error('twilio failed', res.status, await res.text());
-      } catch (e) { console.error('sms failed', e); }
+    const digits = String(n.parentPhone).replace(/[^\d+]/g, '');
+    const clean = digits.startsWith('+') ? digits.slice(1) : digits;
+    const fast2smsKey = Deno.env.get('FAST2SMS_API_KEY');
+
+    try {
+      let sent = false;
+      if (fast2smsKey && clean.startsWith('91') && clean.length === 12) {
+        const localNumber = clean.slice(2);
+        const smsUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(fast2smsKey)}&route=q&message=${encodeURIComponent(smsBody)}&language=english&flash=0&numbers=${localNumber}`;
+        const smsResp = await fetch(smsUrl);
+        const smsData = await smsResp.json().catch(() => ({}));
+        sent = smsResp.ok && smsData?.return !== false;
+      }
+
+      if (!sent) {
+        const tbResp = await fetch('https://textbelt.com/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            phone: `+${clean}`,
+            message: smsBody,
+            key: 'textbelt',
+          }),
+        });
+        const tbData = await tbResp.json().catch(() => ({}));
+        if (!tbResp.ok || !tbData?.success) {
+          console.error('sms failed', tbData);
+        }
+      }
+    } catch (e) {
+      console.error('sms failed', e);
     }
   }
 

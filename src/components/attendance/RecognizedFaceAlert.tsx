@@ -64,7 +64,7 @@ const RecognizedFaceAlert: React.FC<RecognizedFaceAlertProps> = ({
         },
       });
       if (error || !data?.success) throw new Error(data?.error || error?.message || 'Send failed');
-      toast({ title: 'Notification sent', description: `Email + WhatsApp processed for ${employee.name}` });
+      toast({ title: 'Notification sent', description: `Email + WhatsApp + SMS processed for ${employee.name}` });
       setWaCooldown(true);
       setTimeout(() => setWaCooldown(false), 10000);
     } catch (err: any) {
@@ -233,7 +233,7 @@ const RecognizedFaceAlert: React.FC<RecognizedFaceAlertProps> = ({
                   onClick={handleWhatsAppNotify}
                   disabled={waBusy || waCooldown}
                   className="h-8 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
-                  title="Send email + WhatsApp to the parent now"
+                  title="Send email + WhatsApp + SMS to the parent now"
                 >
                   {waBusy
                     ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
