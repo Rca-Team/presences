@@ -332,7 +332,7 @@ serve(async (req) => {
     const rawBody = await req.json()
     const payload = normalizePayload(rawBody)
     if (!payload.body?.trim()) {
-      return new Response(JSON.stringify({ error: 'Forbidden - Admin, Principal, or Teacher access required' }), {
+      return new Response(JSON.stringify({ error: 'Message body is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
