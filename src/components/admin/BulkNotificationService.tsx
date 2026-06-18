@@ -172,7 +172,7 @@ School Administration`;
 
       toast({
         title: "Bulk Notification Complete",
-        description: `Successfully processed ${successCount} email + WhatsApp notifications. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
+        description: `Successfully processed ${successCount} email + WhatsApp + SMS notifications. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
         variant: errorCount > 0 ? "destructive" : "default",
       });
       
