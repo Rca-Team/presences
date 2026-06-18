@@ -302,6 +302,7 @@ serve(async (req) => {
     const supabaseClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
       global: { headers: { Authorization: authHeader } },
     })
+    const dbClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
     const { data: { user }, error: authError } = authHeader
       ? await supabaseClient.auth.getUser()
@@ -339,7 +340,7 @@ serve(async (req) => {
     }
 
     const parentContact = await resolveParentContact(
-      supabaseClient,
+      dbClient,
       payload.targetUserId,
       payload.student.id,
     )
@@ -399,7 +400,7 @@ serve(async (req) => {
       smsError = smsResult.success ? null : smsResult.error || 'SMS failed'
       smsProvider = smsResult.provider || null
 
-      await supabaseClient.from('notification_log').insert({
+      await dbClient.from('notification_log').insert({
         recipient_phone: recipientPhone,
         recipient_id: payload.targetUserId || payload.student.id || null,
         message_content: whatsappBody,
@@ -409,7 +410,7 @@ serve(async (req) => {
         gateway_response: waResult as any,
       })
 
-      await supabaseClient.from('notification_log').insert({
+      await dbClient.from('notification_log').insert({
         recipient_phone: recipientPhone,
         recipient_id: payload.targetUserId || payload.student.id || null,
         message_content: payload.body,
