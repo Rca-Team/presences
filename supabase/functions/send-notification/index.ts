@@ -5,10 +5,12 @@ const resendApiKey = Deno.env.get('RESEND_API_KEY')
 const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
 const whatsappAccessToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
 const whatsappPhoneNumberId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')
+const fast2smsApiKey = Deno.env.get('FAST2SMS_API_KEY')
+const cronSecret = Deno.env.get('CRON_SECRET')
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 }
 
 function escapeHtml(text: string): string {
@@ -113,6 +115,51 @@ async function sendWhatsAppMessage(phoneNumber: string, message: string) {
     return { success: true, messageId: data?.messages?.[0]?.id ?? null }
   } catch (err: any) {
     return { success: false, error: err?.message || 'WhatsApp send failed' }
+  }
+}
+
+async function sendSmsMessage(phoneNumber: string, message: string) {
+  const formattedPhone = normalizePhone(phoneNumber)
+  if (!formattedPhone) return { success: false, provider: 'none', error: 'Invalid phone number' }
+
+  if (fast2smsApiKey && formattedPhone.startsWith('91') && formattedPhone.length === 12) {
+    try {
+      const cleanPhone = formattedPhone.slice(2)
+      const url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(fast2smsApiKey)}&route=q&message=${encodeURIComponent(message)}&language=english&flash=0&numbers=${cleanPhone}`
+      const response = await fetch(url)
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || data?.return === false) {
+        return {
+          success: false,
+          provider: 'fast2sms',
+          error: data?.message?.join?.(', ') || data?.message || 'Fast2SMS send failed',
+        }
+      }
+      return { success: true, provider: 'fast2sms', messageId: data?.request_id ?? null }
+    } catch (err: any) {
+      return { success: false, provider: 'fast2sms', error: err?.message || 'Fast2SMS send failed' }
+    }
+  }
+
+  try {
+    const response = await fetch('https://textbelt.com/text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        phone: `+${formattedPhone}`,
+        message,
+        key: 'textbelt',
+      }),
+    })
+
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok || !data?.success) {
+      return { success: false, provider: 'textbelt', error: data?.error || 'Textbelt send failed' }
+    }
+
+    return { success: true, provider: 'textbelt', messageId: data?.textId ?? null }
+  } catch (err: any) {
+    return { success: false, provider: 'textbelt', error: err?.message || 'Textbelt send failed' }
   }
 }
 
