@@ -289,7 +289,10 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
+    const cronHeader = req.headers.get('x-cron-secret')
+    const isCronCall = !!cronSecret && !!cronHeader && cronHeader === cronSecret
+
+    if (!authHeader && !isCronCall) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -300,31 +303,36 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     })
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
-    if (authError || !user) {
+    const { data: { user }, error: authError } = authHeader
+      ? await supabaseClient.auth.getUser()
+      : { data: { user: null }, error: null }
+
+    if (authHeader && (authError || !user)) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const [{ data: roleData }, { data: teacherData }] = await Promise.all([
-      supabaseClient.from('user_roles').select('role').eq('user_id', user.id).in('role', ['admin', 'principal']).maybeSingle(),
-      supabaseClient.from('teacher_permissions').select('id').eq('user_id', user.id).limit(1),
-    ])
+    if (!isCronCall) {
+      const [{ data: roleData }, { data: teacherData }] = await Promise.all([
+        supabaseClient.from('user_roles').select('role').eq('user_id', user!.id).in('role', ['admin', 'principal']).maybeSingle(),
+        supabaseClient.from('teacher_permissions').select('id').eq('user_id', user!.id).limit(1),
+      ])
 
-    const isAuthorized = roleData || (teacherData && teacherData.length > 0)
-    if (!isAuthorized) {
-      return new Response(JSON.stringify({ error: 'Forbidden - Admin, Principal, or Teacher access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      const isAuthorized = roleData || (teacherData && teacherData.length > 0)
+      if (!isAuthorized) {
+        return new Response(JSON.stringify({ error: 'Forbidden - Admin, Principal, or Teacher access required' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     const rawBody = await req.json()
     const payload = normalizePayload(rawBody)
     if (!payload.body?.trim()) {
-      return new Response(JSON.stringify({ error: 'Message body is required' }), {
+      return new Response(JSON.stringify({ error: 'Forbidden - Admin, Principal, or Teacher access required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -377,11 +385,19 @@ serve(async (req) => {
 
     let whatsappSent = false
     let whatsappError: string | null = null
+    let smsSent = false
+    let smsError: string | null = null
+    let smsProvider: string | null = null
     if (recipientPhone) {
       const whatsappBody = `${payload.subject}\n\n${payload.body}`
       const waResult = await sendWhatsAppMessage(recipientPhone, whatsappBody)
       whatsappSent = waResult.success
       whatsappError = waResult.success ? null : waResult.error || 'WhatsApp failed'
+
+      const smsResult = await sendSmsMessage(recipientPhone, payload.body)
+      smsSent = smsResult.success
+      smsError = smsResult.success ? null : smsResult.error || 'SMS failed'
+      smsProvider = smsResult.provider || null
 
       await supabaseClient.from('notification_log').insert({
         recipient_phone: recipientPhone,
@@ -391,6 +407,16 @@ serve(async (req) => {
         language: 'en',
         status: waResult.success ? 'sent' : 'failed',
         gateway_response: waResult as any,
+      })
+
+      await supabaseClient.from('notification_log').insert({
+        recipient_phone: recipientPhone,
+        recipient_id: payload.targetUserId || payload.student.id || null,
+        message_content: payload.body,
+        notification_type: 'sms',
+        language: 'en',
+        status: smsResult.success ? 'sent' : 'failed',
+        gateway_response: smsResult as any,
       })
     }
 
@@ -407,23 +433,25 @@ serve(async (req) => {
     }
 
     await supabaseClient.from('notifications').insert({
-      user_id: user.id,
+      user_id: user?.id || payload.targetUserId || payload.student.id || null,
       title: `Notification dispatch${payload.student.name ? ` • ${payload.student.name}` : ''}`,
       message: [
         emailSent ? 'Email: sent' : emailError ? `Email: ${emailError}` : 'Email: skipped',
         whatsappSent ? 'WhatsApp: sent' : whatsappError ? `WhatsApp: ${whatsappError}` : 'WhatsApp: skipped',
+        smsSent ? `SMS (${smsProvider || 'provider'}): sent` : smsError ? `SMS: ${smsError}` : 'SMS: skipped',
         inAppNotification ? 'In-app: sent' : 'In-app: skipped',
       ].join(' | '),
       type: 'notification_dispatch',
     })
 
-    const success = emailSent || whatsappSent || inAppNotification
+    const success = emailSent || whatsappSent || smsSent || inAppNotification
     return new Response(JSON.stringify({
       success,
       message: success ? 'Notification processed' : 'No channel delivered',
       channels: {
         email: { sent: emailSent, id: emailId, error: emailError },
         whatsapp: { sent: whatsappSent, error: whatsappError },
+        sms: { sent: smsSent, provider: smsProvider, error: smsError },
         inApp: { sent: inAppNotification },
       },
     }), {
