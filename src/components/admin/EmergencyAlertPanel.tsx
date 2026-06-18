@@ -306,14 +306,14 @@ const EmergencyAlertPanel: React.FC = () => {
         });
       }
 
+      const alertMeta = ALERT_TYPES.find(a => a.type === selectedAlert.type);
+      const title = `🚨 ${alertMeta?.label || 'Emergency Alert'}`;
+      const body = customMessage || alertMeta?.description || 'Emergency alert triggered.';
+
+      await sendEmergencyNotifications(title, body, dbEventType);
+
       // 3. Also show via Notification API directly as fallback
       if (Notification.permission === 'granted' && registration) {
-        const alertMeta = ALERT_TYPES.find(a => a.type === selectedAlert.type);
-        const title = `🚨 ${alertMeta?.label || 'Emergency Alert'}`;
-        const body = customMessage || alertMeta?.description || 'Emergency alert triggered.';
-
-        await sendEmergencyNotifications(title, body, dbEventType);
-        
         await registration.showNotification(title, {
           body,
           icon: '/favicon.ico',
