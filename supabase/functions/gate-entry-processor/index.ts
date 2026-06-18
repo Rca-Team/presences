@@ -63,38 +63,40 @@ serve(async (req) => {
     // Check if parent notification needed
     const { data: profile } = await supabase
       .from('profiles')
-      .select('parent_phone, display_name')
+      .select('parent_phone, parent_email, parent_name, display_name')
       .eq('user_id', studentId)
       .maybeSingle();
 
-    if (profile?.parent_phone) {
-      const fast2smsKey = Deno.env.get("FAST2SMS_API_KEY");
-      if (fast2smsKey) {
-        const time = new Date(entryTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-        const name = studentName || profile.display_name || 'Your child';
-        
-        const message = isLate
-          ? `Dear Parent, ${name} arrived late at school at ${time} via ${gateName}. - Presence`
-          : `Dear Parent, ${name} has arrived at school at ${time}. - Presence`;
+    const hasContact = !!profile?.parent_phone || !!profile?.parent_email;
+    if (hasContact) {
+      const time = new Date(entryTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      const name = studentName || profile?.display_name || 'Your child';
+      const message = isLate
+        ? `Dear Parent, ${name} arrived late at school at ${time} via ${gateName}. - Presence`
+        : `Dear Parent, ${name} has arrived at school at ${time}. - Presence`;
 
-        const cleanPhone = profile.parent_phone.replace(/^\+91/, "").replace(/\s+/g, "");
-        
-        if (/^\d{10}$/.test(cleanPhone)) {
-          const smsUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${fast2smsKey}&route=q&message=${encodeURIComponent(message)}&language=english&flash=0&numbers=${cleanPhone}`;
-          const smsResp = await fetch(smsUrl);
-          const smsData = await smsResp.json();
-          
-          // Log notification
-          await supabase.from('notification_log').insert({
-            recipient_phone: cleanPhone,
-            recipient_id: studentId,
-            message_content: message,
-            language: 'en',
-            status: smsData.return ? 'sent' : 'failed',
-            gateway_response: smsData,
-            notification_type: 'sms'
-          });
-        }
+      const { error: notifyError } = await supabase.functions.invoke('send-notification', {
+        body: {
+          recipient: {
+            email: profile?.parent_email || null,
+            phone: profile?.parent_phone || null,
+            name: profile?.parent_name || `Parent of ${name}`,
+          },
+          message: {
+            subject: isLate ? `Late Arrival Notification - ${name}` : `Attendance Confirmation - ${name}`,
+            body: message,
+          },
+          student: {
+            id: studentId,
+            name,
+            status,
+          },
+          targetUserId: studentId,
+        },
+      });
+
+      if (notifyError) {
+        console.error('send-notification failed from gate-entry-processor', notifyError);
       }
     }
 
